@@ -5,8 +5,8 @@ CREATE TABLE users (
   profileImg VARCHAR(255)
 );`;
 
-export const createRabotoryTableQuery = `
-CREATE TABLE rabotory (
+export const createLabTableQuery = `
+CREATE TABLE lab (
   id UUID PRIMARY KEY,
   title VARCHAR(255),
   makerId UUID,

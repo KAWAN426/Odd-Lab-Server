@@ -3,7 +3,7 @@ id: UniqeString,
 name: String,
 profileImg: String
 }
-Rabotory {
+Lab {
 id: UniqeString,
 title: String,
 makerId: String,
@@ -20,14 +20,14 @@ id:String,
 name:String,
 img:String
 }
-UpdateRabotory {
+UpdateLab {
 title: String,
 objects: Objects[],
 backgroundImg:String,
 combinate:String[][],
 endObj: String[],
 }
-CreateRabotory {
+CreateLab {
 title: String,
 makerId: String,
 objects: Objects[],
@@ -36,16 +36,16 @@ combinate:String[][],
 endObj: String[],
 }
 
--Rabotory
+-Lab
 
-1. getListOrderedByLike() => Rabotory[]
-2. getListOrderedByNewest() => Rabotory[]
-3. getOneById(id:String) => Rabotory
-4. getListByMakerId(makerId:String) => Rabotory[]
-5. createRabotory(data:CreateRabotory)
-6. updateRabotoryObject(data:UpdateRabotory)
-7. updateRabotoryLike(id:String)
-8. DeleteRabotoryById(id:String)
+1. getListOrderedByLike() => Lab[]
+2. getListOrderedByNewest() => Lab[]
+3. getOneById(id:String) => Lab
+4. getListByMakerId(makerId:String) => Lab[]
+5. createLab(data:CreateLab)
+6. updateLabObject(data:UpdateLab)
+7. updateLabLike(id:String)
+8. DeleteLabById(id:String)
 
 -User
 

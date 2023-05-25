@@ -4,7 +4,7 @@ import cors from 'cors';
 import pg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 const { Pool } = pg
-import { checkRabotoryTable, checkTestTable, checkUserTable } from './tableCheck.js';
+import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 
 const pool = new Pool({
   user: 'kawan',
@@ -24,10 +24,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 
-// 1. getListOrderedByLike() => Rabotory[]
-app.get('/rabotory/popular', async (req, res) => {
+// 1. getListOrderedByLike() => Lab[]
+app.get('/lab/popular', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM rabotory ORDER BY like DESC');
+    const result = await pool.query('SELECT * FROM lab ORDER BY like DESC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -35,10 +35,10 @@ app.get('/rabotory/popular', async (req, res) => {
   }
 });
 
-// 2. getListOrderedByNewest() => Rabotory[]
-app.get('/rabotory/newest', async (req, res) => {
+// 2. getListOrderedByNewest() => Lab[]
+app.get('/lab/newest', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM rabotory ORDER BY createdAt DESC');
+    const result = await pool.query('SELECT * FROM lab ORDER BY createdAt DESC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -46,11 +46,11 @@ app.get('/rabotory/newest', async (req, res) => {
   }
 });
 
-// 3. getOneById(id: string) => Rabotory
-app.get('/rabotory/:id', async (req, res) => {
+// 3. getOneById(id: string) => Lab
+app.get('/lab/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM rabotory WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM lab WHERE id = $1', [id]);
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -58,11 +58,11 @@ app.get('/rabotory/:id', async (req, res) => {
   }
 });
 
-// 4. getListByMakerId(makerId: string) => Rabotory[]
-app.get('/rabotory/maker/:makerId', async (req, res) => {
+// 4. getListByMakerId(makerId: string) => Lab[]
+app.get('/lab/maker/:makerId', async (req, res) => {
   const { makerId } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM rabotory WHERE makerid = $1', [makerId]);
+    const result = await pool.query('SELECT * FROM lab WHERE makerid = $1', [makerId]);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -70,12 +70,12 @@ app.get('/rabotory/maker/:makerId', async (req, res) => {
   }
 });
 
-// 5. createRabotory(data: CreateRabotory)
-app.post('/rabotory', async (req, res) => {
+// 5. createLab(data: CreateLab)
+app.post('/lab', async (req, res) => {
   const data = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO rabotory (title, makerId, objects, backgroundimg, combinate, endObj) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      'INSERT INTO lab (title, makerId, objects, backgroundimg, combinate, endObj) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [data.title, data.makerId, data.objects, data.backgroundImg, data.combinate, data.endObj]
     );
     res.json(result.rows[0]);
@@ -85,13 +85,13 @@ app.post('/rabotory', async (req, res) => {
   }
 });
 
-// 6. updateRabotoryObject(data: UpdateRabotory)
-app.put('/rabotory/objects/:id', async (req, res) => {
+// 6. updateLabObject(data: UpdateLab)
+app.put('/lab/objects/:id', async (req, res) => {
   const { id } = req.params;
   const data = req.body;
   try {
     const result = await pool.query(
-      'UPDATE rabotory SET title = $1, objects = $2, backgroundimg = $3, combinate = $4, endobj = $5 WHERE id = $6 RETURNING *',
+      'UPDATE lab SET title = $1, objects = $2, backgroundimg = $3, combinate = $4, endobj = $5 WHERE id = $6 RETURNING *',
       [data.title, data.objects, data.backgroundImg, data.combinate, data.endObj, id]
     );
     res.json(result.rows[0]);
@@ -101,11 +101,11 @@ app.put('/rabotory/objects/:id', async (req, res) => {
   }
 });
 
-// 7. updateRabotoryLike(id: string)
-app.put('/rabotory/like/:id', async (req, res) => {
+// 7. updateLabLike(id: string)
+app.put('/lab/like/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('UPDATE rabotory SET like = like + 1 WHERE id = $1 RETURNING *', [id]);
+    const result = await pool.query('UPDATE lab SET like = like + 1 WHERE id = $1 RETURNING *', [id]);
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -113,12 +113,12 @@ app.put('/rabotory/like/:id', async (req, res) => {
   }
 });
 
-// 8. deleteRabotoryById(id: string)
-app.delete('/rabotory/:id', async (req, res) => {
+// 8. deleteLabById(id: string)
+app.delete('/lab/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM rabotory WHERE id = $1', [id]);
-    res.json({ message: 'Rabotory deleted successfully' });
+    await pool.query('DELETE FROM lab WHERE id = $1', [id]);
+    res.json({ message: 'Lab deleted successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'An error occurred' });
@@ -196,7 +196,7 @@ app.listen(3000, async () => {
     console.log('Database connect failed : ' + error);
   }
   checkUserTable(pool);
-  checkRabotoryTable(pool);
+  checkLabTable(pool);
   checkTestTable(pool)
   // await pool.query(`
   //   CREATE SEQUENCE test_id;
