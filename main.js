@@ -11,7 +11,7 @@ const pool = new Pool({
   host: 'haskal.cfvbadipfzzy.ap-northeast-2.rds.amazonaws.com',
   database: 'haskal_db',
   password: 'gnxQQ08xg!!x',
-  port: 5432, // PostgreSQL 포트 번호
+  port: 5432,
 });
 
 // multer 미들웨어 설정
@@ -198,7 +198,4 @@ app.listen(3000, async () => {
   checkUserTable(pool);
   checkLabTable(pool);
   checkTestTable(pool)
-  // await pool.query(`
-  //   CREATE SEQUENCE test_id;
-  // `)
 });
