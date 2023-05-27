@@ -3,8 +3,8 @@ import multer from 'multer';
 import cors from 'cors';
 import pg from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck';
 const { Pool } = pg
-import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 
 const pool = new Pool({
   user: 'kawan',
@@ -62,7 +62,7 @@ app.get('/lab/:id', async (req, res) => {
 app.get('/lab/maker/:makerId', async (req, res) => {
   const { makerId } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM lab WHERE makerid = $1', [makerId]);
+    const result = await pool.query('SELECT * FROM lab WHERE makerId = $1', [makerId]);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -156,7 +156,6 @@ app.get('/test', async (req, res) => {
 // 2. createTest(data: Test)
 app.post('/test', async (req, res) => {
   const { title, description } = req.body;
-  // const result = await pool.query('SELECT nextval($1)', ['test_id']);
   const id = uuidv4();
   try {
     const result = await pool.query(
@@ -197,5 +196,5 @@ app.listen(3000, async () => {
   }
   checkUserTable(pool);
   checkLabTable(pool);
-  checkTestTable(pool)
+  checkTestTable(pool);
 });
