@@ -1,0 +1,119 @@
+{
+  "sql": "PostgreSQL",
+  "language": "Javascript",
+  "dataType": {
+    "User": {
+      "id": "UniqeString",
+      "name": "String",
+      "profileImg": "String"
+    },
+    "Lab": {
+      "id": "UniqeString",
+      "title": "String",
+      "makerID": "String",
+      "objects": ["Objects"],
+      "backgroundImg": "String",
+      "combinate": [["String"]],
+      "endObj": ["String"],
+      "like": ["String"],
+      "createdAt": "Time",
+      "updatedAt": "Time"
+    },
+    "Objects": {
+      "id": "String",
+      "name": "String",
+      "img": "String"
+    }
+  },
+  "query": [
+    {
+      "name": "getListOrderedByLike",
+      "params": [],
+      "return": ["Lab"]
+    },
+    {
+      "name": "getListOrderedByNewest",
+      "params": [],
+      "return": ["Lab"]
+    },
+    {
+      "name": "getOneById",
+      "params": {"id":"String"},
+      "return": "Lab"
+    },
+    {
+      "name": "getListByMakerID",
+      "params": {"title":"makerID"},
+      "return": ["Lab"]
+    },
+    {
+      "name": "createLab",
+      "params": {
+        "title": "String",
+        "makerID": "String",
+        "objects": ["Objects"],
+        "backgroundImg": "String",
+        "combinate": [["String"]],
+        "endObj": ["String"],
+        "like": ["String"]
+      },
+      "return": []
+    },
+    {
+      "name": "updateLabObject",
+      "params": {
+        "title": "String",
+        "objects": ["Objects"],
+        "backgroundImg": "String",
+        "combinate": [["String"]],
+        "endObj": ["String"]
+      },
+      "return": []
+    },
+    {
+      "name": "updateLabLike",
+      "params": {
+        "id":"String",
+        "userID":"String"
+      },
+      "return": []
+    },
+    {
+      "name": "DeleteLabById",
+      "params": {
+        "id":"String"
+      },
+      "return": []
+    },
+    {
+      "name": "getUser",
+      "params": {
+        "id":"String"
+      },
+      "return": ["User"]
+    },
+    {
+      "name": "createUser",
+      "params": {
+        "name":"String",
+        "profileImg":"String"
+      },
+      "return": []
+    },
+    {
+      "name": "updateUser",
+      "params": {
+        "name":"String",
+        "profileImg":"String"
+      },
+      "return": []
+    },
+    {
+      "name": "deleteUser",
+      "params": {
+        "id":"String"
+      },
+      "return": []
+    }
+  ]
+}

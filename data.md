@@ -44,7 +44,7 @@ endObj: String[],
 4. getListByMakerId(makerId:String) => Lab[]
 5. createLab(data:CreateLab)
 6. updateLabObject(data:UpdateLab)
-7. updateLabLike(id:String)
+7. updateLabLike(id:String,userID:String)
 8. DeleteLabById(id:String)
 
 -User
