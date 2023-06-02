@@ -9,15 +9,16 @@ export const createLabTableQuery = `
 CREATE TABLE lab (
   id UUID PRIMARY KEY,
   title VARCHAR(255),
-  makerId UUID,
-  objects JSONB,
+  makerId REFERENCES users(id),
+  objects Text,
   backgroundImg VARCHAR(255),
-  combinate JSONB,
-  endObj JSONB,
-  "like" INTEGER,
+  combinate char(36)[][],
+  endObj char(36)[],
+  like char(36)[],
+  findObj:Text[] 
   createdAt TIMESTAMPTZ DEFAULT NOW(),
   updatedAt TIMESTAMPTZ DEFAULT NOW()
-);`;
+);`; //TODO: findObj 자료구조 정리하기
 
 export const createTestTableQuery = `
 CREATE TABLE test (
