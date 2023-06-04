@@ -73,13 +73,13 @@ export const updateLabObject = async (req, res) => {
   const { id } = req.params;
   const data = req.body;
   try {
-    const getResult = await pool.query(`
-      SELECT users.id AS user_Id, 
-      FROM lab 
-      JOIN users ON lab.makerId = users.id
+    const getUserData = await pool.query(`
+      SELECT id, 
+      FROM users 
       WHERE id = $1
-    `, [id]);
-    if (getResult.rows[0] === undefined || getResult.rows[0].user_Id !== data.makerId) res.status(500).json({ error: 'Data availability error for update' });
+    `, [data.makerId]);
+    if (getUserData.rows[0] === undefined) // 받아온 데이터의 user id가 올바른지 체크
+      res.status(500).json({ error: 'Data availability error for update' });
     const result = await pool.query(
       'UPDATE lab SET title = $1, objects = $2, backgroundimg = $3, combinate = $4, endobj = $5 WHERE id = $6 RETURNING *',
       [data.title, data.objects, data.backgroundImg, data.combinate, data.endObj, id]
@@ -92,9 +92,12 @@ export const updateLabObject = async (req, res) => {
 }
 
 export const updateLabLike = async (req, res) => {
-  const { id } = req.params;
+  const { id, userId } = req.params;
   try {
-    const result = await pool.query('UPDATE lab SET like = like + 1 WHERE id = $1 RETURNING *', [id]);
+    const result = await pool.query(
+      'UPDATE lab SET "like" = array_append("like", $1) WHERE id = $2 RETURNING *',
+      [userId, id]
+    );
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
