@@ -31,7 +31,7 @@ app.listen(3000, async () => {
     console.log('Database connect failed : ' + error);
   }
 
-  // checkUserTable(pool);
-  // checkLabTable(pool);
-  // checkTestTable(pool);
+  checkUserTable(pool);
+  checkLabTable(pool);
+  checkTestTable(pool);
 });
