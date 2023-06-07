@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const getListOrderedByLike = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM lab ORDER BY array_length(like, 1) DESC');
+    const result = await pool.query('SELECT * FROM lab ORDER BY ARRAY_LENGTH(like, 1) DESC');
     setCache(req, result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -43,9 +43,9 @@ export const getOneById = async (req, res) => {
 }
 
 export const getListByMakerId = async (req, res) => {
-  const { makerId } = req.params;
+  const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM lab WHERE makerId = $1', [makerId]);
+    const result = await pool.query('SELECT * FROM lab WHERE makerId = $1', [id]);
     setCache(req, result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -92,7 +92,8 @@ export const updateLabObject = async (req, res) => {
 }
 
 export const updateLabLike = async (req, res) => {
-  const { id, userId } = req.params;
+  const { id } = req.params;
+  const { userId } = req.body;
   try {
     const result = await pool.query(
       'UPDATE lab SET "like" = array_append("like", $1) WHERE id = $2 RETURNING *',

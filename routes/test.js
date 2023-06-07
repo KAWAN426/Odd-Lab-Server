@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { pool } from './declare.js';
+import { pool } from '../declare.js';
 
 export const makeTestAPI = (app) => {
   app.get('/test/:id', async (req, res) => {

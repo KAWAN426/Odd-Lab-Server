@@ -3,7 +3,7 @@ import cors from 'cors';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLabLike, updateLabObject } from './routes/lab.js';
 import { getFromCache, pool } from './declare.js';
-import { makeTestAPI } from './test.js';
+import { makeTestAPI } from './routes/test.js';
 import { createUser, getUserById, updateUser } from './routes/user.js';
 
 const app = express();
@@ -22,9 +22,9 @@ app.put('/lab/:id', updateLabObject);
 app.put('/lab/like/:id', updateLabLike);
 app.delete('/lab/:id', deleteLabById);
 
-app.get('/lab/popular', getFromCache, getUserById);
-app.post('/lab', createUser);
-app.put('/lab/:id', updateUser);
+app.get('/user', getFromCache, getUserById);
+app.post('/user', createUser);
+app.put('/user/:id', updateUser);
 
 
 app.listen(3000, async () => {
