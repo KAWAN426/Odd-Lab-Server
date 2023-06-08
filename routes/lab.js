@@ -59,7 +59,7 @@ export const createLab = async (req, res) => {
   try {
     const id = uuidv4();
     await pool.query(
-      'INSERT INTO lab (id, title, makerId, objects, backgroundimg, combinate, endObj) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      'INSERT INTO lab (id, title, makerId, objects, backgroundImg, combinate, endObj) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
       [id, data.title, data.makerId, data.objects, data.backgroundImg, data.combinate, data.endObj]
     );
     res.json(`Created new lab, id:${id}`);
@@ -81,7 +81,7 @@ export const updateLabObject = async (req, res) => {
     if (getUserData.rows[0] === undefined) // 받아온 데이터의 user id가 올바른지 체크
       res.status(500).json({ error: 'Data availability error for update' });
     const result = await pool.query(
-      'UPDATE lab SET title = $1, objects = $2, backgroundimg = $3, combinate = $4, endobj = $5 WHERE id = $6 RETURNING *',
+      'UPDATE lab SET title = $1, objects = $2, backgroundImg = $3, combinate = $4, endobj = $5 WHERE id = $6 RETURNING *',
       [data.title, data.objects, data.backgroundImg, data.combinate, data.endObj, id]
     );
     res.json(result.rows[0]);
