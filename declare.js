@@ -17,7 +17,7 @@ export const pool = new Pool({
 export const cache = new NodeCache();
 
 export const getFromCache = (req, res, next) => {
-  const key = req.originalUrl;
+  const key = req.method + req.originalUrl;
   const cachedData = cache.get(key);
   if (cachedData !== undefined) {
     console.log('Cache hit:', key);

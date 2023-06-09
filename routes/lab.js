@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const getListOrderedByLike = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM lab ORDER BY ARRAY_LENGTH(like, 1) DESC');
+    const result = await pool.query('SELECT * FROM lab ORDER BY ARRAY_LENGTH(likedUser, 1) DESC');
     setCache(req, result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -58,9 +58,10 @@ export const createLab = async (req, res) => {
   const data = req.body;
   try {
     const id = uuidv4();
+    const findObj = data.findObj || "{}"
     await pool.query(
-      'INSERT INTO lab (id, title, makerId, objects, backgroundImg, combinate, endObj) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [id, data.title, data.makerId, data.objects, data.backgroundImg, data.combinate, data.endObj]
+      'INSERT INTO lab (id, title, makerId, objects, backgroundImg, combinate, startObj, endObj, likedUser, findObj) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
+      [id, data.title, data.makerId, JSON.stringify(data.objects), data.backgroundImg, data.combinate, data.startObj, data.endObj, [], JSON.stringify(findObj)]
     );
     res.json(`Created new lab, id:${id}`);
   } catch (err) {

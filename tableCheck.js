@@ -9,12 +9,13 @@ const createLabTableQuery = `
 CREATE TABLE lab (
   id UUID PRIMARY KEY,
   title VARCHAR(255),
-  makerId char(36),
+  makerId VARCHAR(36),
   objects JSONB,
   backgroundImg Text,
-  combinate JSONB,
-  endObj char(36)[],
-  likedUser char(36)[],
+  combinate VARCHAR(36)[][],
+  startObj VARCHAR(36)[],
+  endObj VARCHAR(36)[],
+  likedUser VARCHAR(36)[],
   findObj JSONB,
   createdAt TIMESTAMPTZ DEFAULT NOW(),
   updatedAt TIMESTAMPTZ DEFAULT NOW()
