@@ -9,7 +9,7 @@ const createLabTableQuery = `
 CREATE TABLE lab (
   id UUID PRIMARY KEY,
   title VARCHAR(255),
-  makerId VARCHAR(36),
+  makerId UUID,
   objects JSONB,
   backgroundImg Text,
   combinate VARCHAR(36)[][],
