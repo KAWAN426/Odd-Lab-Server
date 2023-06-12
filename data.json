@@ -5,19 +5,19 @@
     "User": {
       "id": "UniqeString",
       "name": "String",
-      "profileImg": "String"
+      "profile_img": "String"
     },
     "Lab": {
       "id": "UniqeString",
       "title": "String",
-      "makerID": "String",
+      "maker_id": "String",
       "objects": ["Objects"],
-      "backgroundImg": "String",
+      "background_img": "String",
       "combinate": [["String"]],
-      "endObj": ["String"],
-      "like": ["String"],
-      "createdAt": "Time",
-      "updatedAt": "Time"
+      "end_obj": ["String"],
+      "liked_user": ["String"],
+      "created_at": "Time",
+      "updated_at": "Time"
     },
     "Objects": {
       "id": "String",
@@ -43,19 +43,19 @@
     },
     {
       "name": "getListByMakerID",
-      "params": {"title":"makerID"},
+      "params": {"title":"maker_id"},
       "return": ["Lab"]
     },
     {
       "name": "createLab",
       "params": {
         "title": "String",
-        "makerID": "String",
+        "maker_id": "String",
         "objects": ["Objects"],
-        "backgroundImg": "String",
+        "background_img": "String",
         "combinate": [["String"]],
-        "endObj": ["String"],
-        "like": ["String"]
+        "end_obj": ["String"],
+        "liked_user": ["String"]
       },
       "return": []
     },
@@ -64,9 +64,9 @@
       "params": {
         "title": "String",
         "objects": ["Objects"],
-        "backgroundImg": "String",
+        "background_img": "String",
         "combinate": [["String"]],
-        "endObj": ["String"]
+        "end_obj": ["String"]
       },
       "return": []
     },
@@ -96,7 +96,7 @@
       "name": "createUser",
       "params": {
         "name":"String",
-        "profileImg":"String"
+        "profile_img":"String"
       },
       "return": []
     },
@@ -104,7 +104,7 @@
       "name": "updateUser",
       "params": {
         "name":"String",
-        "profileImg":"String"
+        "profile_img":"String"
       },
       "return": []
     },

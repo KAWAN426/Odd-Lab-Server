@@ -23,7 +23,7 @@ app.put('/lab/:id', updateLab);
 app.put('/lab/like/:id', updateLabLike);
 app.delete('/lab/:id', deleteLabById);
 
-app.get('/user', getFromCache, getUserById);
+app.get('/user/:id', getFromCache, getUserById);
 app.post('/user', createUser);
 app.put('/user/:id', updateUser);
 

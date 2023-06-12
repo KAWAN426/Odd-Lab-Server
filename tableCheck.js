@@ -2,23 +2,23 @@ const createUserTableQuery = `
 CREATE TABLE users (
   id UUID PRIMARY KEY,
   name VARCHAR(255),
-  profileImg VARCHAR(255)
+  profile_img VARCHAR(255)
 );`;
 
 const createLabTableQuery = `
 CREATE TABLE lab (
   id UUID PRIMARY KEY,
   title VARCHAR(255),
-  makerId UUID,
+  maker_id UUID,
   objects JSONB,
-  backgroundImg Text,
+  background_img Text,
   combinate VARCHAR(36)[][],
-  startObj VARCHAR(36)[],
-  endObj VARCHAR(36)[],
-  likedUser VARCHAR(36)[],
-  findObj JSONB,
-  createdAt TIMESTAMPTZ DEFAULT NOW(),
-  updatedAt TIMESTAMPTZ DEFAULT NOW()
+  start_obj VARCHAR(36)[],
+  end_obj VARCHAR(36)[],
+  liked_user VARCHAR(36)[],
+  find_obj JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );`; //TODO: findObj 자료구조 정리하기
 
 const createTestTableQuery = `
