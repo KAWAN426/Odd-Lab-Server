@@ -3,7 +3,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const getListOrderedByLike = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM lab ORDER BY ARRAY_LENGTH(liked_user, 1) DESC');
+    const result = await pool.query(`
+      SELECT lab.id, title, background_img, start_obj, end_obj, created_at,
+      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
+      users.name AS maker_name, users.profile_img AS maker_img
+      FROM lab 
+      INNER JOIN users ON lab.maker_id = users.id
+      ORDER BY COALESCE(ARRAY_LENGTH(liked_user, 1), 0) DESC;
+    `);
     setCache(req, result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -14,7 +21,14 @@ export const getListOrderedByLike = async (req, res) => {
 
 export const getListOrderedByNewest = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM lab ORDER BY created_at DESC');
+    const result = await pool.query(`
+      SELECT lab.id, title, background_img, start_obj, end_obj, created_at,
+      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
+      users.name AS maker_name, users.profile_img AS maker_img
+      FROM lab 
+      INNER JOIN users ON lab.maker_id = users.id
+      ORDER BY created_at DESC;
+    `);
     setCache(req, result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -25,6 +39,7 @@ export const getListOrderedByNewest = async (req, res) => {
 
 export const getOneById = async (req, res) => {
   const { id } = req.params;
+  const { user_id } = req.body;
   try {
     const result = await pool.query(`
       SELECT lab.*, users.name AS maker_name, users.profile_img AS maker_img
@@ -32,9 +47,18 @@ export const getOneById = async (req, res) => {
       INNER JOIN users ON lab.maker_id = users.id
       WHERE lab.id = $1;
     `, [id]);
-    // delete result.rows[0].maker_id;
-    setCache(req, result.rows[0]);
-    res.json(result.rows[0]);
+    const resultData = result.rows[0]
+
+    // 보안을 위해 maker_id 제거 후 전달
+    delete resultData.maker_id;
+
+    // 보안을 위해 요청자의 find_obj만 전달
+    for (let key in resultData.find_obj) {
+      if (key !== user_id) delete resultData.find_obj[key];
+    }
+
+    setCache(req, resultData);
+    res.json(resultData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'An error occurred' });
@@ -44,7 +68,12 @@ export const getOneById = async (req, res) => {
 export const getListByMakerId = async (req, res) => {
   const { makerId } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM lab WHERE maker_id = $1', [makerId]);
+    const result = await pool.query(`
+      SELECT id, title, background_img, start_obj, end_obj, created_at
+      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count 
+      FROM lab
+      WHERE maker_id = $1;
+    `, [makerId]);
     setCache(req, result.rows);
     res.json(result.rows);
   } catch (err) {
@@ -79,7 +108,7 @@ export const updateLab = async (req, res) => {
       WHERE id = $1
     `, [data.maker_id]);
 
-    if (getUserData.rows[0] === undefined) // 받아온 데이터의 user id가 올바른지 체크
+    if (getUserData.rows[0] === undefined) // * 받아온 데이터의 user id가 올바른지 체크
       return res.status(500).json({ error: 'Data availability error for update' });
 
     const result = await pool.query(
@@ -101,11 +130,26 @@ export const updateLabLike = async (req, res) => {
   const { id } = req.params;
   const { userId } = req.body;
   try {
-    const result = await pool.query(
-      'UPDATE lab SET "liked_user" = array_append("liked_user", $1) WHERE id = $2 RETURNING *',
+    // * 캐시 방식 변경 구상
+    const liked_user = await pool.query(`
+      SELECT liked_user 
+      FROM lab
+      WHERE id = $1;
+    `, [id]);
+
+    if (liked_user.rows.length === 0)
+      return res.status(404).json({ error: 'Data not found' });
+
+    let queryText = "array_append"
+    if (liked_user.rows[0].liked_user.includes(userId)) queryText = "array_remove";
+    await pool.query(`
+      UPDATE lab 
+      SET "liked_user" = ${queryText}("liked_user", $1) 
+      WHERE id = $2;`,
       [userId, id]
     );
-    res.json(result.rows[0]);
+    // * 캐시 제거 추가
+    res.json("Updated successfully");
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'An error occurred' });
@@ -117,6 +161,7 @@ export const deleteLabById = async (req, res) => {
   try {
     await pool.query('DELETE FROM lab WHERE id = $1', [id]);
     res.json({ message: 'Lab deleted successfully' });
+    // * 캐시 제거 추가
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'An error occurred' });
