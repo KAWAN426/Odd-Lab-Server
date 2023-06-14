@@ -13,11 +13,14 @@ app.use(cors());
 
 makeTestAPI(app)
 
-app.get('/lab/popular', getFromCache, getListOrderedByLike);
-app.get('/lab', getFromCache, getListOrderedByLike);
-app.get('/lab/newest', getFromCache, getListOrderedByNewest);
+// ! 필요성에 따라서 구현 여부가 결정이됨
+
+app.get('/lab/popular/:page', getFromCache, getListOrderedByLike);
+app.get('/lab/newest/:page', getFromCache, getListOrderedByNewest);
 app.get('/lab/:id', getFromCache, getOneById);
-app.get('/lab/maker/:makerId', getFromCache, getListByMakerId);
+app.get('/lab/maker/:makerId/:page', getFromCache, getListByMakerId);
+// ! 검색 기능 개발해야함
+app.get('/lab/search', getFromCache, getListOrderedByLike);
 app.post('/lab', createLab);
 app.put('/lab/:id', updateLab);
 app.put('/lab/like/:id', updateLabLike);

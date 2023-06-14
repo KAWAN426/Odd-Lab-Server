@@ -28,5 +28,5 @@ export const getFromCache = (req, res, next) => {
 };
 
 export const setCache = (req, data) => {
-  cache.set(req.method + req.originalUrl, data, 60000);
+  cache.set(req.method + req.originalUrl, data, 30000);
 }
