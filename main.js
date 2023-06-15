@@ -4,7 +4,7 @@ import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
 import { getFromCache, pool } from './declare.js';
 import { makeTestAPI } from './routes/test.js';
-import { createUser, getUserById, updateUser } from './routes/user.js';
+import { createUser, getUserById, updateUser } from './routes/users.js';
 
 const app = express();
 app.use(express.json());
@@ -13,14 +13,17 @@ app.use(cors());
 
 makeTestAPI(app)
 
-// ! 필요성에 따라서 구현 여부가 결정이됨
 
-app.get('/lab/popular/:page', getFromCache, getListOrderedByLike);
+// ? 데이터를 캐시에 저장하고 사용하는 방식 구현
+// ? 그냥 캐시를 변수로 구현하고 후에 redis로 바꾸는건 어렵지 않음
+
+// * 결과를 배열 캐시 덮어씌우기
+app.get('/lab/popular/:page', getFromCache, getListOrderedByLike); 
+// * 결과를 배열 캐시 덮어씌우기
 app.get('/lab/newest/:page', getFromCache, getListOrderedByNewest);
 app.get('/lab/:id', getFromCache, getOneById);
 app.get('/lab/maker/:makerId/:page', getFromCache, getListByMakerId);
-// ! 검색 기능 개발해야함
-app.get('/lab/search', getFromCache, getListOrderedByLike);
+// app.get('/lab/search', getFromCache, getListOrderedByLike); // ! 검색 기능 개발해야함
 app.post('/lab', createLab);
 app.put('/lab/:id', updateLab);
 app.put('/lab/like/:id', updateLabLike);
