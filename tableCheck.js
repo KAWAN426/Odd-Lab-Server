@@ -17,8 +17,8 @@ CREATE TABLE lab (
   end_obj VARCHAR(36)[],
   liked_user VARCHAR(36)[],
   find_obj JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
 );`; //TODO: findObj 자료구조 정리하기
 
 const createTestTableQuery = `

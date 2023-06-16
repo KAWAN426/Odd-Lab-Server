@@ -14,12 +14,9 @@ app.use(cors());
 makeTestAPI(app)
 
 
-// ? 데이터를 캐시에 저장하고 사용하는 방식 구현
-// ? 그냥 캐시를 변수로 구현하고 후에 redis로 바꾸는건 어렵지 않음
+// !!!!!!! cachero 기능 추가한거 테스트
 
-// * 결과를 배열 캐시 덮어씌우기
-app.get('/lab/popular/:page', getFromCache, getListOrderedByLike); 
-// * 결과를 배열 캐시 덮어씌우기
+app.get('/lab/popular/:page', getFromCache, getListOrderedByLike);
 app.get('/lab/newest/:page', getFromCache, getListOrderedByNewest);
 app.get('/lab/:id', getFromCache, getOneById);
 app.get('/lab/maker/:makerId/:page', getFromCache, getListByMakerId);
