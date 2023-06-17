@@ -9,14 +9,18 @@ export const getListOrderedByLike = async (req, res) => {
 
   const cacheData = cachero.getSortedData("like_count", "number", "DESC")
   const pagedData = cachero.sliceDataByPage(cacheData, page, pageSize)
-  if (pagedData) {
+  if (pagedData.length > 0) {
     console.log("cachero hit!")
+    for (let i = 0; i < pagedData.length; i++) {
+      delete pagedData[i].liked_user
+    }
     return res.json(pagedData);
   }
 
   try {
     const result = await pool.query(`
       SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
+      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab 
       INNER JOIN users ON lab.maker_id = users.id
@@ -25,11 +29,12 @@ export const getListOrderedByLike = async (req, res) => {
     `, [pageSize * 2, offset]);
     console.log("cachero miss!")
     // setCache(req, result.rows);
-    result.rows.forEach((data, key) => {
-      result.rows[key].like_count = data.liked_user.length
-      delete result.rows[key].liked_user
-    })
     cachero.appendData(result.rows);
+
+    for (let i = 0; i < result.rows.length; i++) {
+      delete result.rows[i].liked_user
+    }
+
     res.json(result.rows.slice(0, pageSize));
   } catch (err) {
     console.error(err);
@@ -44,23 +49,26 @@ export const getListOrderedByNewest = async (req, res) => {
   const cacheData = cachero.getSortedData("created_at", "date", "DESC")
   const pagedData = cachero.sliceDataByPage(cacheData, page, pageSize)
 
-  if (pagedData) {
+  if (pagedData.length > 0) {
+    for (let i = 0; i < pagedData.length; i++) {
+      delete pagedData[i].liked_user
+    }
     return res.json(pagedData);
   }
   try {
     const result = await pool.query(`
-      SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user, 
+      SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
+      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab 
       INNER JOIN users ON lab.maker_id = users.id
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2;
     `, [pageSize * 2, offset]);
-    result.rows.forEach((data, key) => {
-      result.rows[key].like_count = data.liked_user.length
-      delete result.rows[key].liked_user
-    })
     cachero.appendData(result.rows)
+    for (let i = 0; i < result.rows.length; i++) {
+      delete result.rows[i].liked_user
+    }
     // setCache(req, result.rows);
     res.json(result.rows.slice(0, pageSize));
   } catch (err) {
@@ -74,7 +82,8 @@ export const getOneById = async (req, res) => {
   const { userId } = req.body;
 
   const cacheData = cachero.getOneData("id", id)
-  if (cacheData) {
+  if (cacheData && cacheData.find_obj.hasOwnProperty("find_obj")) {
+    delete cacheData.liked_user
     for (let key in cacheData.find_obj) {
       if (key !== userId) delete cacheData.find_obj[key];
     }
@@ -84,17 +93,15 @@ export const getOneById = async (req, res) => {
 
   try {
     const result = await pool.query(`
-      SELECT lab.id, title, objects, background_img, combinate, start_obj, end_obj, find_obj, created_at,
-      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
+      SELECT lab.id, title, objects, background_img, combinate, start_obj, end_obj, find_obj, created_at, liked_user,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab
       INNER JOIN users ON lab.maker_id = users.id
       WHERE lab.id = $1;
     `, [id]);
     const resultData = result.rows[0]
-    resultData.
     console.log("cachero miss!")
-    
+
     cachero.appendData([result.rows[0]])
 
     // * 보안을 위해 요청자의 find_obj만 전달
@@ -118,21 +125,29 @@ export const getListByMakerId = async (req, res) => {
   const cacheData = cachero.getFilteredData("maker_id", makerId)
   const pagedData = cachero.sliceDataByPage(cacheData, page, pageSize)
 
-  if (pagedData) {
+  if (pagedData.length > 0) {
+    pagedData.forEach((data, key) => {
+      pagedData[key].like_count = data.liked_user.length
+      delete pagedData[key].liked_user
+    })
     return res.json(pagedData);
   }
 
   try {
     const result = await pool.query(`
-      SELECT id, title, maker_id, background_img, start_obj, end_obj, created_at, updated_at,
-      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count 
+      SELECT id, title, maker_id, background_img, start_obj, end_obj, created_at, updated_at, liked_user,
+      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       FROM lab
       WHERE maker_id = $1
       ORDER BY updated_at DESC
       LIMIT $2 OFFSET $3;
     `, [makerId, pageSize * 2, offset]);
 
-    cachero.appendData([result.rows[0]])
+    cachero.appendData(result.rows)
+    result.rows.forEach((data, key) => {
+      result.rows[key].like_count = data.liked_user.length
+      delete result.rows[key].liked_user
+    })
     // setCache(req, result.rows);
     res.json(result.rows.slice(0, pageSize));
   } catch (err) {
@@ -159,7 +174,7 @@ export const createLab = async (req, res) => {
     const timestamp = new Date().toISOString();
     const find_obj = data.find_obj || "{}"
     const liked_user = []
-    cachero.appendData([{ id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, find_obj, liked_user, created_at: timestamp, updated_at: timestamp, maker_name, maker_img }])
+    cachero.appendData([{ id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, find_obj, liked_user, like_count: 0, created_at: timestamp, updated_at: timestamp, maker_name, maker_img }])
     // const result = await pool.query(
     //   'INSERT INTO lab (id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, liked_user, find_obj) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
     //   [id, title, maker_id, JSON.stringify(objects), background_img, combinate, start_obj, end_obj, liked_user, JSON.stringify(find_obj)]
@@ -207,11 +222,11 @@ export const updateLab = async (req, res) => {
 }
 
 export const updateLabLike = async (req, res) => {
-  const { id } = req.params;
-  const { userId } = req.body;
+  const { id, userId } = req.params;
   try {
     // * 캐시 방식 변경 구상
 
+    // ! 이걸로 받아오는거 제거하고 cachero로 받아오는 기능으로 변경
     const liked_user = await pool.query(`
       SELECT liked_user 
       FROM lab
@@ -221,20 +236,22 @@ export const updateLabLike = async (req, res) => {
     if (liked_user.rows.length === 0)
       return res.status(404).json({ error: 'Data not found' });
 
-    let queryText = "array_append"
-    const likedUser = liked_user.rows[0].liked_user.length
+    // let queryText = "array_append"
+    const likedUser = liked_user.rows[0].liked_user
     if (likedUser.includes(userId)) {
-      queryText = "array_remove";
-      cachero.appendData([{ id, like_count: likedUser.length - 1 }])
+      // queryText = "array_remove";
+      likedUser.splice(likedUser.indexOf(userId), 1);
+      cachero.appendData([{ id, like_count: likedUser.length, liked_user }])
     } else {
-      cachero.appendData([{ id, like_count: likedUser.length + 1 }])
+      likedUser.push(userId)
+      cachero.appendData([{ id, like_count: likedUser.length, liked_user }])
     }
-    await pool.query(`
-      UPDATE lab 
-      SET "liked_user" = ${queryText}("liked_user", $1) 
-      WHERE id = $2;`,
-      [userId, id]
-    );
+    // await pool.query(`
+    //   UPDATE lab 
+    //   SET "liked_user" = ${queryText}("liked_user", $1) 
+    //   WHERE id = $2;`,
+    //   [userId, id]
+    // );
 
     res.json("Updated successfully");
 
@@ -250,7 +267,7 @@ export const updateLabLike = async (req, res) => {
 export const deleteLabById = async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM lab WHERE id = $1', [id]);
+    // await pool.query('DELETE FROM lab WHERE id = $1', [id]);
     res.json({ message: 'Lab deleted successfully' });
     // * 캐시 제거 추가
     // cache.set(`GET/lab/${id}`, undefined, 30000);
