@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
-import { getFromCache, pool } from './declare.js';
+import { labCachero, getFromCache, pool } from './declare.js';
 import { makeTestAPI } from './routes/test.js';
 import { createUser, getUserById, updateUser } from './routes/users.js';
 
@@ -35,11 +35,11 @@ app.listen(3000, async () => {
   try {
     await pool.connect();
     console.log("Database connected")
+    checkUserTable(pool);
+    checkLabTable(pool);
+    checkTestTable(pool);
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }
 
-  checkUserTable(pool);
-  checkLabTable(pool);
-  checkTestTable(pool);
 });

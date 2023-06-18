@@ -1,4 +1,4 @@
-import { cache, cachero, pool, setCache } from "../declare.js";
+import { cache, labCachero, pool, setCache } from "../declare.js";
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -7,14 +7,15 @@ export const getListOrderedByLike = async (req, res) => {
   const pageSize = 30; // 페이지당 항목 수
   const offset = (page - 1) * pageSize; // 오프셋 계산
 
-  const cacheData = cachero.getSortedData("like_count", "number", "DESC")
-  const pagedData = cachero.sliceDataByPage(cacheData, page, pageSize)
-  if (pagedData.length > 0) {
-    console.log("cachero hit!")
-    for (let i = 0; i < pagedData.length; i++) {
-      delete pagedData[i].liked_user
+  const cacheData = labCachero.getSortedData("like_count", "number", "DESC").paginate(page, pageSize)
+  // const dataCount = labCachero.getDataCount()
+  const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
+  // labCachero.setDataCount(labCountResult.rows[0].count)
+  if (cacheData.length >= labCountResult.rows[0].count || cacheData.length >= pageSize) {
+    for (let i = 0; i < cacheData.length; i++) {
+      delete cacheData[i].liked_user
     }
-    return res.json(pagedData);
+    return res.json(cacheData);
   }
 
   try {
@@ -27,9 +28,9 @@ export const getListOrderedByLike = async (req, res) => {
       ORDER BY COALESCE(ARRAY_LENGTH(liked_user, 1), 0) DESC
       LIMIT $1 OFFSET $2;
     `, [pageSize * 2, offset]);
-    console.log("cachero miss!")
+    console.log("labCachero miss!")
     // setCache(req, result.rows);
-    cachero.appendData(result.rows);
+    labCachero.appendData(result.rows);
 
     for (let i = 0; i < result.rows.length; i++) {
       delete result.rows[i].liked_user
@@ -46,15 +47,14 @@ export const getListOrderedByNewest = async (req, res) => {
   const { page } = req.params;
   const pageSize = 30; // 페이지당 항목 수
   const offset = (page - 1) * pageSize; // 오프셋 계산
-  const cacheData = cachero.getSortedData("created_at", "date", "DESC")
-  const pagedData = cachero.sliceDataByPage(cacheData, page, pageSize)
+  // const cacheData = labCachero.getSortedData("created_at", "date", "DESC").paginate(page, pageSize)
 
-  if (pagedData.length > 0) {
-    for (let i = 0; i < pagedData.length; i++) {
-      delete pagedData[i].liked_user
-    }
-    return res.json(pagedData);
-  }
+  // if (pagedData.length > 0) {
+  //   for (let i = 0; i < pagedData.length; i++) {
+  //     delete pagedData[i].liked_user
+  //   }
+  //   return res.json(pagedData);
+  // }
   try {
     const result = await pool.query(`
       SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
@@ -65,7 +65,7 @@ export const getListOrderedByNewest = async (req, res) => {
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2;
     `, [pageSize * 2, offset]);
-    cachero.appendData(result.rows)
+    labCachero.appendData(result.rows)
     for (let i = 0; i < result.rows.length; i++) {
       delete result.rows[i].liked_user
     }
@@ -81,13 +81,13 @@ export const getOneById = async (req, res) => {
   const { id } = req.params;
   const { userId } = req.body;
 
-  const cacheData = cachero.getOneData("id", id)
+  const cacheData = labCachero.getOneData("id", id)
   if (cacheData && cacheData.find_obj.hasOwnProperty("find_obj")) {
     delete cacheData.liked_user
     for (let key in cacheData.find_obj) {
       if (key !== userId) delete cacheData.find_obj[key];
     }
-    console.log("cachero Hit!")
+    console.log("labCachero Hit!")
     return res.json(cacheData);
   }
 
@@ -100,9 +100,9 @@ export const getOneById = async (req, res) => {
       WHERE lab.id = $1;
     `, [id]);
     const resultData = result.rows[0]
-    console.log("cachero miss!")
+    console.log("labCachero miss!")
 
-    cachero.appendData([result.rows[0]])
+    labCachero.appendData([result.rows[0]])
 
     // * 보안을 위해 요청자의 find_obj만 전달
     for (let key in resultData.find_obj) {
@@ -122,8 +122,8 @@ export const getListByMakerId = async (req, res) => {
   const pageSize = 30; // 페이지당 항목 수
   const offset = (page - 1) * pageSize; // 오프셋 계산
 
-  const cacheData = cachero.getFilteredData("maker_id", makerId)
-  const pagedData = cachero.sliceDataByPage(cacheData, page, pageSize)
+  const cacheData = labCachero.getFilteredData("maker_id", makerId)
+  const pagedData = labCachero.sliceDataByPage(cacheData, page, pageSize)
 
   if (pagedData.length > 0) {
     pagedData.forEach((data, key) => {
@@ -143,7 +143,7 @@ export const getListByMakerId = async (req, res) => {
       LIMIT $2 OFFSET $3;
     `, [makerId, pageSize * 2, offset]);
 
-    cachero.appendData(result.rows)
+    labCachero.appendData(result.rows)
     result.rows.forEach((data, key) => {
       result.rows[key].like_count = data.liked_user.length
       delete result.rows[key].liked_user
@@ -174,7 +174,7 @@ export const createLab = async (req, res) => {
     const timestamp = new Date().toISOString();
     const find_obj = data.find_obj || "{}"
     const liked_user = []
-    cachero.appendData([{ id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, find_obj, liked_user, like_count: 0, created_at: timestamp, updated_at: timestamp, maker_name, maker_img }])
+    labCachero.appendData([{ id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, find_obj, liked_user, like_count: 0, created_at: timestamp, updated_at: timestamp, maker_name, maker_img }])
     // const result = await pool.query(
     //   'INSERT INTO lab (id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, liked_user, find_obj) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
     //   [id, title, maker_id, JSON.stringify(objects), background_img, combinate, start_obj, end_obj, liked_user, JSON.stringify(find_obj)]
@@ -207,11 +207,11 @@ export const updateLab = async (req, res) => {
 
     // if (result.rows[0] === undefined)
     //   return res.status(500).json({ error: 'Data availability error for update' });
-    const cachedData = cachero.getOneData("id", id)
+    const cachedData = labCachero.getOneData("id", id)
 
     if (cachedData) {
       const timestamp = new Date().toISOString();
-      cachero.appendData([{ id, title, objects, background_img, combinate, start_obj, end_obj, updated_at: timestamp }])
+      labCachero.appendData([{ id, title, objects, background_img, combinate, start_obj, end_obj, updated_at: timestamp }])
       return res.json(`Updated lab, id:${id}`);
     }
     return res.json(`Please in update page`);
@@ -226,7 +226,7 @@ export const updateLabLike = async (req, res) => {
   try {
     // * 캐시 방식 변경 구상
 
-    // ! 이걸로 받아오는거 제거하고 cachero로 받아오는 기능으로 변경
+    // ! 이걸로 받아오는거 제거하고 labCachero로 받아오는 기능으로 변경
     const liked_user = await pool.query(`
       SELECT liked_user 
       FROM lab
@@ -241,10 +241,10 @@ export const updateLabLike = async (req, res) => {
     if (likedUser.includes(userId)) {
       // queryText = "array_remove";
       likedUser.splice(likedUser.indexOf(userId), 1);
-      cachero.appendData([{ id, like_count: likedUser.length, liked_user }])
+      labCachero.appendData([{ id, like_count: likedUser.length, liked_user }])
     } else {
       likedUser.push(userId)
-      cachero.appendData([{ id, like_count: likedUser.length, liked_user }])
+      labCachero.appendData([{ id, like_count: likedUser.length, liked_user }])
     }
     // await pool.query(`
     //   UPDATE lab 
@@ -271,7 +271,7 @@ export const deleteLabById = async (req, res) => {
     res.json({ message: 'Lab deleted successfully' });
     // * 캐시 제거 추가
     // cache.set(`GET/lab/${id}`, undefined, 30000);
-    cachero.removeData(id)
+    labCachero.removeData(id)
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'An error occurred' });

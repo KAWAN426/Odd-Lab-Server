@@ -32,4 +32,4 @@ export const setCache = (req, data) => {
   cache.set(req.method + req.originalUrl, data, 30000);
 }
 
-export const cachero = createCachero()
+export const labCachero = createCachero()
