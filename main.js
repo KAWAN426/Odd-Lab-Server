@@ -35,6 +35,8 @@ app.listen(3000, async () => {
   try {
     await pool.connect();
     console.log("Database connected")
+    const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
+    labCachero.setCount(labCountResult.rows[0].count)
     checkUserTable(pool);
     checkLabTable(pool);
     checkTestTable(pool);

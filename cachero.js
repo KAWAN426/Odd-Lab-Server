@@ -1,18 +1,24 @@
+const getData = ({ sort, page, select, unselect, filter }) => {
 
-// ? 여기서 기능 구현
+}
+
 export const createCachero = (cacheName) => {
-  const data = []
-  const dataCount = { count: 0 }
-
-  const getAllData = () => data
-  const getDataCount = () => dataCount.count
-  const setDataCount = (newCount) => dataCount.count = newCount
-  // const getOneData = (key, value) => getDataByKey(data, key, value)
-  const getSortedData = (standardKey, standardType, orderType) => sortData(data, standardKey, standardType, orderType)
-  const getFilteredData = (keyName, filterVal) => filterByValue(data, keyName, filterVal)
-  const appendData = (newData) => mergeObjectsById(data, newData, dataCount)
-  const removeData = (id) => removeObjectById(data, id)
-  return { getAllData, getDataCount, setDataCount, getSortedData, getFilteredData, appendData, removeData }
+  const cache = { count: 0, data: [], name: cacheName }
+  const setCount = (count) => cache.count = count
+  const getCount = () => cache.count
+  const getData = () => cache.data
+  const cSort = (standardKey, standardType, orderType) => sortData(cache, standardKey, standardType, orderType)
+  const cFilter = (keyName, filterVal) => filterByValue(cache, keyName, filterVal)
+  const cMerge = (newData) => mergeData(cache, newData)
+  const cCreate = (newData) => createData(cache, newData)
+  const cRemove = (id) => removeDataById(cache, id)
+  const middleware = ({ data, res, page }) => {
+    if (String(data.length) === String(cache.count)) {
+      if (page && data.length >= page.pageSize + page.offset) return res.json(data);
+      else return res.json(data);
+    }
+  }
+  return { getCount, getData, setCount, cSort, cFilter, cMerge, cCreate, cRemove, middleware }
 }
 
 function pickData(data, keys) {
@@ -25,8 +31,9 @@ function pickData(data, keys) {
     });
     return newObj;
   });
-  pickedData.paginate = (page, pageSize) => paginateData(pickedData, page, pageSize)
-  return pickedData
+  const get = () => pickedData
+  const paginate = (page, pageSize) => paginateData(pickedData, page, pageSize)
+  return { get, paginate }
 }
 
 function omitData(data, keys) {
@@ -39,17 +46,19 @@ function omitData(data, keys) {
     }
     return newObj;
   });
-  omitedData.paginate = (page, pageSize) => paginateData(omitedData, page, pageSize)
-  return omitedData
+  const get = () => omitedData
+  const paginate = (page, pageSize) => paginateData(omitedData, page, pageSize)
+  return { get, paginate }
 }
 
 function paginateData(data, page, pageSize) {
   const startIndex = (page - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const result = data.slice(startIndex, endIndex)
-  result.select = (key) => pickData(result, key)
-  result.unselect = (key) => omitData(result, key)
-  return result;
+  const get = () => result
+  const select = (key) => pickData(result, key)
+  const unselect = (key) => omitData(result, key)
+  return { get, select, unselect };
 }
 
 // function getDataByKey(data, key, value) {
@@ -66,15 +75,16 @@ function paginateData(data, page, pageSize) {
 //   return result
 // }
 
-function filterByValue(data, keyName, filterVal) {
+function filterByValue({ data }, keyName, filterVal) {
   const result = data.filter((value) => value[keyName] === filterVal)
-  result.select = (keys) => pickData(result, keys)
-  result.unselect = (keys) => omitData(result, keys)
-  result.paginate = (page, pageSize) => paginateData(result, page, pageSize)
-  return result
+  const get = () => result
+  const select = (keys) => pickData(result, keys)
+  const unselect = (keys) => omitData(result, keys)
+  const paginate = (page, pageSize) => paginateData(result, page, pageSize)
+  return { get, select, unselect, paginate }
 }
 
-function sortData(data, standardKey, standardType, orderType) {
+function sortData({ data }, standardKey, standardType, orderType) {
   const getSortFunc = () => {
     if (standardType === "date") {
       if (orderType === "DESC") return (a, b) => Number(new Date(b[standardKey])) - Number(new Date(a[standardKey]))
@@ -90,33 +100,38 @@ function sortData(data, standardKey, standardType, orderType) {
     }
   }
   const result = data.sort(getSortFunc())
-  result.select = (keys) => pickData(result, keys)
-  result.unselect = (keys) => omitData(result, keys)
-  result.paginate = (page, pageSize) => paginateData(result, page, pageSize)
-  return result;
+  const get = () => result
+  const select = (keys) => pickData(result, keys)
+  const unselect = (keys) => omitData(result, keys)
+  const paginate = (page, pageSize) => paginateData(result, page, pageSize)
+  return { get, select, unselect, paginate };
 }
 
-function removeObjectById(arr, id, dataCount) {
+function removeDataById({ data, count }, id) {
   // 배열에서 특정 id를 가진 오브젝트를 제거하는 함수
-  const index = arr.findIndex(obj => obj.id === id); // 특정 id를 가진 오브젝트의 인덱스를 찾음
+  const index = data.findIndex(obj => obj.id === id); // 특정 id를 가진 오브젝트의 인덱스를 찾음
 
   if (index !== -1) {
-    dataCount.count--;
-    arr.splice(index, 1); // 해당 인덱스의 오브젝트를 배열에서 제거
+    count--;
+    data.splice(index, 1); // 해당 인덱스의 오브젝트를 배열에서 제거
   }
 }
 
-function mergeObjectsById(targetArray, newArray, dataCount) {
+function createData({ data, count }, newData) {
+  count++;
+  return data.push(newData)
+}
+
+function mergeData({ data }, newArray) {
   newArray.forEach(newObj => {
-    const existingObjIndex = targetArray.findIndex(obj => obj.id === newObj.id);
+    const existingObjIndex = data.findIndex(obj => obj.id === newObj.id);
 
     if (existingObjIndex !== -1) {
-      targetArray[existingObjIndex] = { ...targetArray[existingObjIndex], ...newObj }; // 이미 있는 오브젝트를 덮어씌우면서 새로운 키를 추가
+      data[existingObjIndex] = { ...data[existingObjIndex], ...newObj }; // 이미 있는 오브젝트를 덮어씌우면서 새로운 키를 추가
     } else {
-      dataCount.count++;
-      targetArray.push(newObj); // 새로운 오브젝트를 추가
+      data.push(newObj); // 새로운 오브젝트를 추가
     }
   });
 
-  return targetArray;
+  return data;
 }
