@@ -20,7 +20,7 @@ app.get('/lab/popular/:page', getListOrderedByLike);
 app.get('/lab/newest/:page', getListOrderedByNewest);
 app.get('/lab/:id', getOneById);
 app.get('/lab/maker/:makerId/:page', getListByMakerId);
-// app.get('/lab/search', getListOrderedByLike); // ! 검색 기능 개발해야함
+app.get('/lab/search', getListOrderedByLike); // ! 검색 기능 개발해야함
 app.post('/lab', createLab);
 app.put('/lab/:id', updateLab);
 app.put('/lab/like/:id/:userId', updateLabLike);

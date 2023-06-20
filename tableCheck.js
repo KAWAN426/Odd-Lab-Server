@@ -2,7 +2,8 @@ const createUserTableQuery = `
 CREATE TABLE users (
   id UUID PRIMARY KEY,
   name VARCHAR(255),
-  profile_img VARCHAR(255)
+  email Text,
+  profile_img Text
 );`;
 
 const createLabTableQuery = `
