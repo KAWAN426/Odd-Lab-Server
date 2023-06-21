@@ -1,4 +1,4 @@
-import { redis } from "./declare.js"
+import { pool, redis } from "./declare.js"
 
 export const createCachero = (cacheName) => {
   const data = []
@@ -18,7 +18,77 @@ export const createCachero = (cacheName) => {
       else return res.json(data);
     }
   }
-  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, middleware }
+  const scheduler = (times) => cacheScheduler(times, saveAllDatas, data)
+  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, middleware, scheduler }
+}
+
+function cacheScheduler(times, fn, data) {
+  // 주기적으로 현재 시간 체크
+  const intervalId = setInterval(() => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // times 배열을 순회하며 특정 시간에 함수 실행
+    for (let i = 0; i < times.length; i++) {
+      const [hour, minute] = times[i];
+
+      // 시간과 분이 일치하는 경우 함수 실행
+      if (currentHour === hour && currentMinute === minute) {
+        fn(data);
+        break;
+      }
+    }
+  }, 60000); // 1분(60초)마다 체크
+
+  // 스케줄러 중지 함수
+  function cancel() {
+    clearInterval(intervalId);
+  }
+
+  // 스케줄러 중지 함수를 반환
+  return cancel;
+}
+
+async function saveAllDatas(datas) {
+  const upsertQuery = `
+    INSERT INTO lab (id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, liked_user, find_obj, created_at, updated_at)
+    VALUES
+      ${datas.map((_, index) => `($${index * 12 + 1}, $${index * 12 + 2}, $${index * 12 + 3}, $${index * 12 + 4}, $${index * 12 + 5}, $${index * 12 + 6}, $${index * 12 + 7}, $${index * 12 + 8}, $${index * 12 + 9}, $${index * 12 + 10}, $${index * 12 + 11}, $${index * 12 + 12})`).join(', ')}
+    ON CONFLICT (id) DO UPDATE
+    SET
+      title = COALESCE(EXCLUDED.title, lab.title),
+      maker_id = COALESCE(EXCLUDED.maker_id, lab.maker_id),
+      objects = COALESCE(EXCLUDED.objects, lab.objects),
+      background_img = COALESCE(EXCLUDED.background_img, lab.background_img),
+      combinate = COALESCE(EXCLUDED.combinate, lab.combinate),
+      start_obj = COALESCE(EXCLUDED.start_obj, lab.start_obj),
+      end_obj = COALESCE(EXCLUDED.end_obj, lab.end_obj),
+      liked_user = COALESCE(EXCLUDED.liked_user, lab.liked_user),
+      find_obj = COALESCE(EXCLUDED.find_obj, lab.find_obj),
+      updated_at = COALESCE(EXCLUDED.updated_at, lab.updated_at);
+  `;
+
+  const values = datas.reduce((acc, data) => {
+    acc.push(
+      data.id,
+      data.title,
+      data.maker_id,
+      data.objects,
+      data.background_img,
+      data.combinate,
+      data.start_obj,
+      data.end_obj,
+      data.liked_user,
+      data.find_obj,
+      data.created_at,
+      data.updated_at
+    );
+    return acc;
+  }, []);
+
+
+  await pool.query(upsertQuery, values);
 }
 
 function pickData(data, keys) {

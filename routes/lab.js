@@ -50,12 +50,6 @@ export const getListOrderedByLike = async (req, res) => {
     console.log("labCachero miss!")
     labCachero.cMerge(result.rows);
 
-    const datas = labCachero.getData()
-    console.log(datas)
-    datas.map((data, index) => {
-      console.log(index)
-    })
-
     for (let i = 0; i < result.rows.length; i++) {
       delete result.rows[i].liked_user
     }
@@ -216,8 +210,11 @@ export const updateLab = async (req, res) => {
     if (cachedData) {
       const timestamp = new Date().toISOString();
       labCachero.cMerge([{ id, title, objects, background_img, combinate, start_obj, end_obj, updated_at: timestamp }])
+
       return res.json(`Updated lab, id:${id}`);
     }
+
+
     return res.json(`Please in update page`);
   } catch (err) {
     console.error(err);
