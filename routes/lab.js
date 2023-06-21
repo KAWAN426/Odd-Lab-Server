@@ -49,6 +49,13 @@ export const getListOrderedByLike = async (req, res) => {
     `, [pageSize * 2, offset]);
     console.log("labCachero miss!")
     labCachero.cMerge(result.rows);
+
+    const datas = labCachero.getData()
+    console.log(datas)
+    datas.map((data, index) => {
+      console.log(index)
+    })
+
     for (let i = 0; i < result.rows.length; i++) {
       delete result.rows[i].liked_user
     }
