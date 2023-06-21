@@ -20,7 +20,7 @@ CREATE TABLE lab (
   find_obj JSONB,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ
-);`; //TODO: findObj 자료구조 정리하기
+);`;
 
 const createTestTableQuery = `
 CREATE TABLE test (

@@ -2,6 +2,7 @@ import NodeCache from 'node-cache';
 import pg from 'pg';
 import dotenv from "dotenv"
 import { createCachero } from './cachero.js';
+import { createClient } from 'redis';
 
 const { Pool } = pg
 
@@ -31,5 +32,9 @@ export const getFromCache = (req, res, next) => {
 export const setCache = (req, data) => {
   cache.set(req.method + req.originalUrl, data, 30000);
 }
+
+export const redis = createClient({
+  url: `redis://${process.env.REDIS_USERNAME}:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}/0`,
+});
 
 export const labCachero = createCachero()

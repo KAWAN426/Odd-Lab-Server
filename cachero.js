@@ -1,3 +1,5 @@
+import { redis } from "./declare.js"
+
 export const createCachero = (cacheName) => {
   const data = []
   const info = { count: 0, name: cacheName }
@@ -70,31 +72,6 @@ function filterByValue(data, keyName, filterVal) {
   return { get, select, unselect, paginate, sort, filter }
 }
 
-// function sortData(data, standardKey, standardType, orderType) {
-//   const getSortFunc = () => {
-//     if (standardType === "date") {
-//       if (orderType === "DESC") return (a, b) => Number(new Date(b[standardKey])) - Number(new Date(a[standardKey]))
-//       else return (a, b) => Number(new Date(a[standardKey])) - Number(new Date(b[standardKey]))
-//     }
-//     else if (standardType === "string") {
-//       if (orderType === "DESC") return (a, b) => b[standardKey].localeCompare(a[standardKey])
-//       else return (a, b) => a[standardKey].localeCompare(b[standardKey])
-//     }
-//     else if (standardType === "number") {
-//       if (orderType === "DESC") return (a, b) => b[standardKey] - a[standardKey]
-//       else return (a, b) => a[standardKey] - b[standardKey]
-//     }
-//   }
-//   const result = data.sort(getSortFunc())
-//   const get = () => result
-//   const select = (keys) => pickData(result, keys)
-//   const unselect = (keys) => omitData(result, keys)
-//   const paginate = (page, pageSize) => paginateData(result, page, pageSize)
-//   const sort = (standardKey, standardType, orderType) => sortData(result, standardKey, standardType, orderType)
-//   const filter = (keyName, filterVal) => filterByValue(result, keyName, filterVal)
-//   return { get, select, unselect, paginate, sort, filter };
-// }
-
 function isDate(value) {
   return !isNaN(Date.parse(value));
 }
@@ -143,7 +120,7 @@ function createData(data, newData) {
   return data.push(newData)
 }
 
-function mergeData(data, newArray) {
+async function mergeData(data, newArray) {
   const deepCopyData = JSON.parse(JSON.stringify(newArray))
   deepCopyData.forEach(newObj => {
     const existingObjIndex = data.findIndex(obj => obj.id === newObj.id);
@@ -154,6 +131,16 @@ function mergeData(data, newArray) {
       data.push(newObj); // 새로운 오브젝트를 추가
     }
   });
+
+  await data.forEach((obj) => {
+    const value = JSON.stringify(obj);
+    redis.sAdd("lab", value);
+  });
+
+  // * 저장한 데이터 가져오는 코드
+  // const members = await redis.sMembers("lab")
+  // const result = Array.from(members).map((value) => JSON.parse(value));
+  // console.log(result)
 
   return data;
 }

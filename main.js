@@ -1,10 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
-import { createLab, deleteLabById, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
-import { labCachero, getFromCache, pool } from './declare.js';
+import { createLab, deleteLabById, getDataByKeyword, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
+import { labCachero, pool, redis } from './declare.js';
 import { makeTestAPI } from './routes/test.js';
-import { createUser, getUserById, updateUser } from './routes/users.js';
+import { getUserById, upsertUser } from './routes/users.js';
 
 const app = express();
 app.use(express.json());
@@ -13,22 +13,18 @@ app.use(cors());
 
 makeTestAPI(app)
 
-
-// !!!!!!! cachero 기능 추가한거 테스트
-
 app.get('/lab/popular/:page', getListOrderedByLike);
 app.get('/lab/newest/:page', getListOrderedByNewest);
 app.get('/lab/:id', getOneById);
 app.get('/lab/maker/:makerId/:page', getListByMakerId);
-app.get('/lab/search', getListOrderedByLike); // ! 검색 기능 개발해야함
+app.get('/lab/search', getDataByKeyword);
 app.post('/lab', createLab);
 app.put('/lab/:id', updateLab);
 app.put('/lab/like/:id/:userId', updateLabLike);
 app.delete('/lab/:id', deleteLabById);
 
 app.get('/user/:id', getUserById);
-app.post('/user', createUser);
-app.put('/user/:id', updateUser);
+app.put('/user/:id', upsertUser);
 
 app.listen(3000, async () => {
   console.log('Server is running on port 3000');
@@ -40,8 +36,39 @@ app.listen(3000, async () => {
     checkUserTable(pool);
     checkLabTable(pool);
     checkTestTable(pool);
+
+    redis.on('error', err => {
+      console.log('Redis Client Error', err)
+      // job.cancel()
+    });
+    await redis.connect();
+
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }
-
 });
+
+function scheduler(time, task) {
+  // time.forEach(([hour, minute]) => {
+
+  // })
+  const now = new Date();
+  const nextRunTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0);
+  let timeUntilNextRun = nextRunTime.getTime() - now.getTime();
+
+  if (timeUntilNextRun < 0) {
+    // 이미 오늘의 목표 시간이 지났다면 다음 날로 설정
+    nextRunTime.setDate(nextRunTime.getDate() + 1);
+    timeUntilNextRun = nextRunTime.getTime() - now.getTime();
+  }
+
+  let isClear = false;
+
+  const clear = () => isClear = true
+  setTimeout(function () {
+    task(); // 입력받은 함수 실행
+    if (!isClear) scheduler(hour, minute, task); // 다음 날 같은 시간에 다시 실행
+  }, timeUntilNextRun);
+
+  return { clear }
+}

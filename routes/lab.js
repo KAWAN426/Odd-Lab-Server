@@ -2,18 +2,25 @@ import { cache, labCachero, pool, setCache } from "../declare.js";
 import { v4 as uuidv4 } from 'uuid';
 
 export const getDataByKeyword = async (req, res) => {
+  const { page } = req.params;
+  const { keywords } = req.body;
+  const pageSize = 30; // 페이지당 항목 수
+  const offset = (page - 1) * pageSize; // 오프셋 계산
   try {
+    const searchQuery = keywords.map(keyword => `title ILIKE '%${keyword}%'`).join(' OR ');
     const result = await pool.query(`  
       SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
       COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab
-      WHERE title ILIKE $1;
+      WHERE ${searchQuery};
       ORDER BY COALESCE(ARRAY_LENGTH(liked_user, 1), 0) DESC, created_at DESC
-      LIMIT $2 OFFSET $3;
-    `, [])
+      LIMIT $1 OFFSET $2;
+    `, [pageSize, offset])
+    res.json(result.rows);
   } catch (err) {
-
+    console.error(err);
+    res.status(500).json({ error: 'An error occurred' });
   }
 }
 export const getListOrderedByLike = async (req, res) => {
