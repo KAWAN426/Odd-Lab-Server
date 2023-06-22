@@ -29,27 +29,31 @@ app.put('/user/:id', upsertUser);
 app.listen(3000, async () => {
   console.log('Server is running on port 3000');
   try {
-    await pool.connect();
-    console.log("Postgresql connected")
+    // await pool.connect();
+    // console.log("Postgresql connected")
 
-    redis.on('error', err => {
-      console.log('Redis Client Error', err)
-      // job.cancel()
-    });
-    await redis.connect();
-    console.log("Redis connected")
+    // redis.on('error', err => {
+    //   console.log('Redis Client Error', err)
+    //   // job.cancel()
+    // });
+    // await redis.connect();
+    // console.log("Redis connected")
 
-    // const job = scheduler(3, 0, saveAllDatas)
-    const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
-    labCachero.setCount(labCountResult.rows[0].count)
-    checkUserTable(pool);
-    checkLabTable(pool);
-    checkTestTable(pool);
+    // // const job = scheduler(3, 0, saveAllDatas)
+    // const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
+    // labCachero.setCount(labCountResult.rows[0].count)
+    // checkUserTable(pool);
+    // checkLabTable(pool);
+    // checkTestTable(pool);
 
-    const times = [[3, 0]];
-    labCachero.scheduler(times)
+    // const times = [[3, 0]];
+    // labCachero.scheduler(times)
 
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }
 });
+
+process.on('uncaughtException', async (err) => {
+  console.log("123456543212345654321")
+})

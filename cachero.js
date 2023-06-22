@@ -16,13 +16,6 @@ export const createCachero = (cacheName) => {
   return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, batchSave, scheduler, isCached }
 }
 
-async function createData(info, newData) {
-  const result = info.data.push(newData)
-  info.count = info.count + 1
-  redis.set("lab", JSON.stringify(result))
-  return result
-}
-
 function cacheScheduler(times, fnArr) {
   // 주기적으로 현재 시간 체크
   const intervalId = setInterval(() => {
@@ -89,7 +82,7 @@ async function saveCacheBatch({ data }) {
   await pool.query(upsertQuery, values);
 
   data.splice(0, data.length)
-  
+
   preloadDataOnCache()
 }
 
