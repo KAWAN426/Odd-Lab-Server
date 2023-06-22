@@ -1,16 +1,16 @@
 import { pool, redis } from "./declare.js"
 
 export const createCachero = (cacheName) => {
-  const data = []
-  const info = { count: 0, name: cacheName }
+  const info = { count: 0, name: cacheName, cachedKey: [], data: [] }
   const setCount = (count) => info.count = count
   const getCount = () => info.count
-  const getData = () => data
-  const cSort = (keys, sortOrder) => sortData(data, keys, sortOrder)
-  const cFilter = (keyName, filterVal) => filterByValue(data, keyName, filterVal)
-  const cMerge = (newData) => mergeData(data, newData)
-  const cCreate = (newData) => { createData(data, newData); info.count++; }
-  const cRemove = (id) => { removeDataById(data, id); info.count--; }
+  const getData = () => info.data
+  const cSort = (keys, sortOrder) => sortData(info, keys, sortOrder)
+  const cFilter = (keyName, filterVal) => filterByValue(info, keyName, filterVal)
+  const cMerge = (newData, src) => mergeData(info, newData, src)
+  const isCached = (key) => info.cachedKey.includes(key)
+  const cCreate = (newData) => { createData(info, newData); }
+  const cRemove = (id) => { removeDataById(info, id); }
   const middleware = ({ data, res, page }) => {
     if (String(data.length) === String(info.count)) {
       console.log("cachero hit!")
@@ -18,11 +18,12 @@ export const createCachero = (cacheName) => {
       else return res.json(data);
     }
   }
-  const scheduler = (times) => cacheScheduler(times, saveAllDatas, data)
-  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, middleware, scheduler }
+  const batchSave = () => saveCacheBatch(info)
+  const scheduler = (times) => cacheScheduler(times, [batchSave])
+  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, middleware, batchSave, scheduler, isCached }
 }
 
-function cacheScheduler(times, fn, data) {
+function cacheScheduler(times, fnArr) {
   // 주기적으로 현재 시간 체크
   const intervalId = setInterval(() => {
     const now = new Date();
@@ -35,26 +36,24 @@ function cacheScheduler(times, fn, data) {
 
       // 시간과 분이 일치하는 경우 함수 실행
       if (currentHour === hour && currentMinute === minute) {
-        fn(data);
+        fnArr.forEach(fn => fn());
         break;
       }
     }
   }, 60000); // 1분(60초)마다 체크
 
   // 스케줄러 중지 함수
-  function cancel() {
-    clearInterval(intervalId);
-  }
+  const cancel = () => clearInterval(intervalId)
 
   // 스케줄러 중지 함수를 반환
   return cancel;
 }
 
-async function saveAllDatas(datas) {
+async function saveCacheBatch({ data }) {
   const upsertQuery = `
     INSERT INTO lab (id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, liked_user, find_obj, created_at, updated_at)
     VALUES
-      ${datas.map((_, index) => `($${index * 12 + 1}, $${index * 12 + 2}, $${index * 12 + 3}, $${index * 12 + 4}, $${index * 12 + 5}, $${index * 12 + 6}, $${index * 12 + 7}, $${index * 12 + 8}, $${index * 12 + 9}, $${index * 12 + 10}, $${index * 12 + 11}, $${index * 12 + 12})`).join(', ')}
+      ${data.map((_, index) => `($${index * 12 + 1}, $${index * 12 + 2}, $${index * 12 + 3}, $${index * 12 + 4}, $${index * 12 + 5}, $${index * 12 + 6}, $${index * 12 + 7}, $${index * 12 + 8}, $${index * 12 + 9}, $${index * 12 + 10}, $${index * 12 + 11}, $${index * 12 + 12})`).join(', ')}
     ON CONFLICT (id) DO UPDATE
     SET
       title = COALESCE(EXCLUDED.title, lab.title),
@@ -69,26 +68,42 @@ async function saveAllDatas(datas) {
       updated_at = COALESCE(EXCLUDED.updated_at, lab.updated_at);
   `;
 
-  const values = datas.reduce((acc, data) => {
+  const values = data.reduce((acc, value) => {
     acc.push(
-      data.id,
-      data.title,
-      data.maker_id,
-      data.objects,
-      data.background_img,
-      data.combinate,
-      data.start_obj,
-      data.end_obj,
-      data.liked_user,
-      data.find_obj,
-      data.created_at,
-      data.updated_at
+      value.id,
+      value.title,
+      value.maker_id,
+      value.objects,
+      value.background_img,
+      value.combinate,
+      value.start_obj,
+      value.end_obj,
+      value.liked_user,
+      value.find_obj,
+      value.created_at,
+      value.updated_at
     );
     return acc;
   }, []);
 
-
   await pool.query(upsertQuery, values);
+
+  data.splice(0, data.length)
+}
+
+// ! 기능 개발
+async function preloadDataOnCache() {
+  const result = await pool.query(`
+      SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
+      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
+      users.name AS maker_name, users.profile_img AS maker_img
+      FROM lab 
+      INNER JOIN users ON lab.maker_id = users.id
+      ORDER BY created_at DESC
+      LIMIT $1;
+    `, [30 * 2]);
+
+
 }
 
 function pickData(data, keys) {
@@ -131,7 +146,7 @@ function paginateData(data, page, pageSize) {
   return { get, select, unselect };
 }
 
-function filterByValue(data, keyName, filterVal) {
+function filterByValue({ data }, keyName, filterVal) {
   const result = data.filter((value) => value[keyName] === filterVal)
   const get = () => result
   const select = (keys) => pickData(result, keys)
@@ -146,7 +161,7 @@ function isDate(value) {
   return !isNaN(Date.parse(value));
 }
 
-function sortData(data, keys, sortOrder = 'ASC') {
+function sortData({ data }, keys, sortOrder = 'ASC') {
   data.sort((a, b) => {
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
@@ -176,21 +191,26 @@ function sortData(data, keys, sortOrder = 'ASC') {
   return { get, select, unselect, paginate, sort, filter };
 }
 
-function removeDataById(data, id) {
+async function removeDataById({ data }, id) {
   // 배열에서 특정 id를 가진 오브젝트를 제거하는 함수
   const index = data.findIndex(obj => obj.id === id); // 특정 id를 가진 오브젝트의 인덱스를 찾음
 
   if (index !== -1) {
-    // count--;
     data.splice(index, 1); // 해당 인덱스의 오브젝트를 배열에서 제거
   }
+
+  redis.set("lab", JSON.stringify(data))
 }
 
-function createData(data, newData) {
-  return data.push(newData)
+async function createData({ data }, newData) {
+  const result = data.push(newData)
+  redis.set("lab", JSON.stringify(result))
+  return result
 }
 
-async function mergeData(data, newArray) {
+async function mergeData(info, newArray, src) {
+  const { data, cachedKey } = info
+  cachedKey.push(src)
   const deepCopyData = JSON.parse(JSON.stringify(newArray))
   deepCopyData.forEach(newObj => {
     const existingObjIndex = data.findIndex(obj => obj.id === newObj.id);
@@ -202,15 +222,18 @@ async function mergeData(data, newArray) {
     }
   });
 
-  await data.forEach((obj) => {
-    const value = JSON.stringify(obj);
-    redis.sAdd("lab", value);
-  });
+  redis.set("lab", JSON.stringify(data))
 
-  // * 저장한 데이터 가져오는 코드
-  // const members = await redis.sMembers("lab")
-  // const result = Array.from(members).map((value) => JSON.parse(value));
-  // console.log(result)
+  // * SET 형식 저장 코드
+  // await data.forEach((obj) => {
+  //   const value = JSON.stringify(obj);
+  //   redis.sAdd("lab", value);
+  // });
+  // const result = await redis.sMembers("lab")
+
+  // * SET 형식 가져오는 코드
+  // const members = await redis.set("lab", JSON.stringify(data))
+  // console.log(members)
 
   return data;
 }

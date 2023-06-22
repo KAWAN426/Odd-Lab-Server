@@ -48,6 +48,7 @@ app.listen(3000, async () => {
 
     const times = [[3, 0]];
     labCachero.scheduler(times)
+
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }

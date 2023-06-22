@@ -1,4 +1,4 @@
-import { cache, labCachero, pool, setCache } from "../declare.js";
+import { cache, labCachero, pool, redis, setCache } from "../declare.js";
 import { v4 as uuidv4 } from 'uuid';
 
 export const getDataByKeyword = async (req, res) => {
@@ -27,6 +27,7 @@ export const getListOrderedByLike = async (req, res) => {
   const { page } = req.params;
   const pageSize = 30; // 페이지당 항목 수
   const offset = (page - 1) * pageSize; // 오프셋 계산
+  const cachedKey = req.originalUrl;
 
   const cacheData = labCachero
     .cSort(["like_count", "created_at"], "DESC")
@@ -35,7 +36,7 @@ export const getListOrderedByLike = async (req, res) => {
     .get();
 
   const middleware = labCachero.middleware({ data: cacheData, res, page: { pageSize, offset } })
-  if (middleware) return middleware
+  if (middleware && labCachero.isCached(cachedKey)) return middleware
 
   try {
     const result = await pool.query(`
@@ -48,7 +49,7 @@ export const getListOrderedByLike = async (req, res) => {
       LIMIT $1 OFFSET $2;
     `, [pageSize * 2, offset]);
     console.log("labCachero miss!")
-    labCachero.cMerge(result.rows);
+    labCachero.cMerge(result.rows, cachedKey);
 
     for (let i = 0; i < result.rows.length; i++) {
       delete result.rows[i].liked_user
@@ -64,14 +65,15 @@ export const getListOrderedByNewest = async (req, res) => {
   const { page } = req.params;
   const pageSize = 30; // 페이지당 항목 수
   const offset = (page - 1) * pageSize; // 오프셋 계산
+  const cachedKey = req.originalUrl;
+
   const cacheData = labCachero
     .cSort(["created_at"], "DESC")
     .paginate(page, pageSize)
     .select(["id", "title", "background_img", "start_obj", "end_obj", "created_at", "like_count", "maker_name", "maker_img"])
     .get();
-
   const middleware = labCachero.middleware({ data: cacheData, res, page: { pageSize, offset } })
-  if (middleware) return middleware
+  if (middleware && labCachero.isCached(cachedKey)) return middleware
 
   try {
     const result = await pool.query(`
@@ -84,7 +86,7 @@ export const getListOrderedByNewest = async (req, res) => {
       LIMIT $1 OFFSET $2;
     `, [pageSize * 2, offset]);
     console.log("labCachero miss!")
-    labCachero.cMerge(result.rows)
+    labCachero.cMerge(result.rows, cachedKey)
     for (let i = 0; i < result.rows.length; i++) {
       delete result.rows[i].liked_user
     }
