@@ -1,4 +1,4 @@
-import { pool, redis } from "./declare.js"
+import { labCachero, pool, redis } from "./declare.js"
 
 export const createCachero = (cacheName) => {
   const info = { count: 0, name: cacheName, cachedKey: [], data: [] }
@@ -7,20 +7,20 @@ export const createCachero = (cacheName) => {
   const getData = () => info.data
   const cSort = (keys, sortOrder) => sortData(info, keys, sortOrder)
   const cFilter = (keyName, filterVal) => filterByValue(info, keyName, filterVal)
-  const cMerge = (newData, src) => mergeData(info, newData, src)
+  const cMerge = (newData, key) => mergeData(info, newData, key)
   const isCached = (key) => info.cachedKey.includes(key)
-  const cCreate = (newData) => { createData(info, newData); }
-  const cRemove = (id) => { removeDataById(info, id); }
-  const middleware = ({ data, res, page }) => {
-    if (String(data.length) === String(info.count)) {
-      console.log("cachero hit!")
-      if (page && data.length >= page.pageSize + page.offset) return res.json(data);
-      else return res.json(data);
-    }
-  }
+  const cCreate = (newData) => { createData(info, newData); info.count++; }
+  const cRemove = (id) => { removeDataById(info, id); info.count--; }
   const batchSave = () => saveCacheBatch(info)
   const scheduler = (times) => cacheScheduler(times, [batchSave])
-  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, middleware, batchSave, scheduler, isCached }
+  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, batchSave, scheduler, isCached }
+}
+
+async function createData(info, newData) {
+  const result = info.data.push(newData)
+  info.count = info.count + 1
+  redis.set("lab", JSON.stringify(result))
+  return result
 }
 
 function cacheScheduler(times, fnArr) {
@@ -89,21 +89,46 @@ async function saveCacheBatch({ data }) {
   await pool.query(upsertQuery, values);
 
   data.splice(0, data.length)
+  
+  preloadDataOnCache()
 }
 
 // ! 기능 개발
 async function preloadDataOnCache() {
-  const result = await pool.query(`
-      SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
-      COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
-      users.name AS maker_name, users.profile_img AS maker_img
-      FROM lab 
-      INNER JOIN users ON lab.maker_id = users.id
-      ORDER BY created_at DESC
-      LIMIT $1;
-    `, [30 * 2]);
+  const newestResult = await pool.query(`
+    SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
+    COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
+    users.name AS maker_name, users.profile_img AS maker_img
+    FROM lab 
+    INNER JOIN users ON lab.maker_id = users.id
+    ORDER BY created_at DESC
+    LIMIT $1;
+  `, [30 * 2]);
+  const popularResult = await pool.query(`
+    SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
+    COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
+    users.name AS maker_name, users.profile_img AS maker_img
+    FROM lab 
+    INNER JOIN users ON lab.maker_id = users.id
+    ORDER BY COALESCE(ARRAY_LENGTH(liked_user, 1), 0) DESC, created_at DESC
+    LIMIT $1;
+  `, [30 * 2]);
+
+  const newestData = newestResult.rows
+  const popularData = popularResult.rows
 
 
+  newestData.forEach(newObj => {
+    const existingObjIndex = popularData.findIndex(obj => obj.id === newObj.id);
+
+    if (existingObjIndex !== -1) {
+      popularData[existingObjIndex] = { ...popularData[existingObjIndex], ...newObj }; // 이미 있는 오브젝트를 덮어씌우면서 새로운 키를 추가
+    } else {
+      popularData.push(newObj); // 새로운 오브젝트를 추가
+    }
+  });
+
+  redis.set("lab", JSON.stringify(popularData))
 }
 
 function pickData(data, keys) {
@@ -191,26 +216,27 @@ function sortData({ data }, keys, sortOrder = 'ASC') {
   return { get, select, unselect, paginate, sort, filter };
 }
 
-async function removeDataById({ data }, id) {
+async function removeDataById(info, id) {
   // 배열에서 특정 id를 가진 오브젝트를 제거하는 함수
-  const index = data.findIndex(obj => obj.id === id); // 특정 id를 가진 오브젝트의 인덱스를 찾음
+  const index = info.data.findIndex(obj => obj.id === id); // 특정 id를 가진 오브젝트의 인덱스를 찾음
 
   if (index !== -1) {
-    data.splice(index, 1); // 해당 인덱스의 오브젝트를 배열에서 제거
+    info.data.splice(index, 1); // 해당 인덱스의 오브젝트를 배열에서 제거
   }
 
-  redis.set("lab", JSON.stringify(data))
+  redis.set("lab", JSON.stringify(info.data))
 }
 
-async function createData({ data }, newData) {
-  const result = data.push(newData)
+async function createData(info, newData) {
+  const result = info.data.push(newData)
+  info.count = info.count + 1
   redis.set("lab", JSON.stringify(result))
   return result
 }
 
-async function mergeData(info, newArray, src) {
+async function mergeData(info, newArray, key) {
   const { data, cachedKey } = info
-  cachedKey.push(src)
+  cachedKey.push(key)
   const deepCopyData = JSON.parse(JSON.stringify(newArray))
   deepCopyData.forEach(newObj => {
     const existingObjIndex = data.findIndex(obj => obj.id === newObj.id);

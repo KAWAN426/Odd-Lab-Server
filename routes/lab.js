@@ -35,8 +35,10 @@ export const getListOrderedByLike = async (req, res) => {
     .select(["id", "title", "background_img", "start_obj", "end_obj", "created_at", "like_count", "maker_name", "maker_img"])
     .get();
 
-  const middleware = labCachero.middleware({ data: cacheData, res, page: { pageSize, offset } })
-  if (middleware && labCachero.isCached(cachedKey)) return middleware
+  if (String(cacheData.length) === String(labCachero.getCount()) || cacheData.length >= pageSize + offset) {
+    console.log("cachero hit!")
+    return res.json(cacheData)
+  }
 
   try {
     const result = await pool.query(`
@@ -72,8 +74,11 @@ export const getListOrderedByNewest = async (req, res) => {
     .paginate(page, pageSize)
     .select(["id", "title", "background_img", "start_obj", "end_obj", "created_at", "like_count", "maker_name", "maker_img"])
     .get();
-  const middleware = labCachero.middleware({ data: cacheData, res, page: { pageSize, offset } })
-  if (middleware && labCachero.isCached(cachedKey)) return middleware
+  console.log(labCachero.isCached(cachedKey))
+  if (String(cacheData.length) === String(labCachero.getCount()) || cacheData.length >= pageSize + offset) {
+    console.log("cachero hit!")
+    return res.json(cacheData)
+  }
 
   try {
     const result = await pool.query(`
@@ -152,8 +157,10 @@ export const getListByMakerId = async (req, res) => {
     .select(["id", "title", "background_img", "start_obj", "end_obj", "created_at", "updated_at", "like_count"])
     .get();
 
-  const middleware = labCachero.middleware({ data: cacheData, res, page: { pageSize, offset } })
-  if (middleware) return middleware
+  if (String(cacheData.length) === String(labCachero.getCount()) || cacheData.length >= pageSize + offset) {
+    console.log("cachero hit!")
+    return res.json(cacheData)
+  }
 
   try {
     const result = await pool.query(`
