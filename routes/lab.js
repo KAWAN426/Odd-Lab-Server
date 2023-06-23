@@ -1,4 +1,4 @@
-import { cache, labCachero, pool, redis, setCache } from "../declare.js";
+import { labCachero, pool } from "../declare.js";
 import { v4 as uuidv4 } from 'uuid';
 
 export const getDataByKeyword = async (req, res) => {
@@ -222,7 +222,6 @@ export const updateLab = async (req, res) => {
 
       return res.json(`Updated lab, id:${id}`);
     }
-
 
     return res.json(`Please in update page`);
   } catch (err) {

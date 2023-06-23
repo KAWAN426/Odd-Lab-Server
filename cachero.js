@@ -12,7 +12,7 @@ export const createCachero = (cacheName) => {
   const cCreate = (newData) => { createData(info, newData); info.count++; }
   const cRemove = (id) => { removeDataById(info, id); info.count--; }
   const batchSave = () => saveCacheBatch(info)
-  const scheduler = (times) => cacheScheduler(times, [batchSave])
+  const scheduler = (times) => cacheScheduler(times, [batchSave, preloadDataOnCache])
   return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, batchSave, scheduler, isCached }
 }
 
@@ -39,7 +39,7 @@ function cacheScheduler(times, fnArr) {
   const cancel = () => clearInterval(intervalId)
 
   // 스케줄러 중지 함수를 반환
-  return cancel;
+  return { cancel };
 }
 
 async function saveCacheBatch({ data }) {
@@ -82,11 +82,8 @@ async function saveCacheBatch({ data }) {
   await pool.query(upsertQuery, values);
 
   data.splice(0, data.length)
-
-  preloadDataOnCache()
 }
 
-// ! 기능 개발
 async function preloadDataOnCache() {
   const newestResult = await pool.query(`
     SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,

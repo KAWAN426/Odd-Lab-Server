@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import v8 from 'v8';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getDataByKeyword, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
 import { labCachero, pool, redis } from './declare.js';
@@ -26,34 +27,43 @@ app.delete('/lab/:id', deleteLabById);
 app.get('/user/:id', getUserById);
 app.put('/user/:id', upsertUser);
 
+app.get('/memory', (_, res) => {
+  const memoryUsage = process.memoryUsage();
+  const maxMemory = v8.getHeapStatistics().heap_size_limit;
+
+  const usedMemory = memoryUsage.heapUsed;
+  const memoryPercentage = (usedMemory / maxMemory) * 100;
+
+  res.json({
+    usedMemory,
+    maxMemory,
+    memoryPercentage
+  });
+})
+
 app.listen(3000, async () => {
   console.log('Server is running on port 3000');
   try {
-    // await pool.connect();
-    // console.log("Postgresql connected")
+    await pool.connect();
+    console.log("Postgresql connected")
 
-    // redis.on('error', err => {
-    //   console.log('Redis Client Error', err)
-    //   // job.cancel()
-    // });
-    // await redis.connect();
-    // console.log("Redis connected")
+    const times = [[3, 0]];
+    const scheduler = labCachero.scheduler(times)
 
-    // // const job = scheduler(3, 0, saveAllDatas)
-    // const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
-    // labCachero.setCount(labCountResult.rows[0].count)
-    // checkUserTable(pool);
-    // checkLabTable(pool);
-    // checkTestTable(pool);
+    redis.on('error', err => {
+      console.log('Redis Client Error', err)
+      scheduler.cancel()
+    });
+    await redis.connect();
+    console.log("Redis connected")
 
-    // const times = [[3, 0]];
-    // labCachero.scheduler(times)
+    const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
+    labCachero.setCount(labCountResult.rows[0].count)
+    checkUserTable(pool);
+    checkLabTable(pool);
+    checkTestTable(pool);
 
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }
 });
-
-process.on('uncaughtException', async (err) => {
-  console.log("123456543212345654321")
-})

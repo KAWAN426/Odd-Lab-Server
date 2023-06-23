@@ -1,18 +1,4 @@
 import { pool, setCache } from "../declare.js";
-import { v4 as uuidv4 } from 'uuid';
-
-// export const createUser = async (req, res) => {
-//   try {
-//     const { name, profile_img, email } = req.body;
-//     const id = uuidv4();
-//     const insertQuery = 'INSERT INTO users (id, name, profile_img, email) VALUES ($1, $2, $3, $4)';
-//     await pool.query(insertQuery, [id, name, profile_img, email]);
-//     res.status(201).json(`Created new user, id:${id}`);
-//   } catch (error) {
-//     console.error('Error creating user:', error);
-//     res.status(500).json({ error: 'An error occurred' });
-//   }
-// };
 
 export const getUserById = async (req, res) => {
   try {
