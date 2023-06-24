@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import v8 from 'v8';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getDataByKeyword, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
 import { labCachero, pool, redis } from './declare.js';
@@ -11,8 +13,22 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
+app.use(helmet());
 
-makeTestAPI(app)
+app.use((_, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Frame-Options', 'DENY');
+  next();
+});
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분 동안
+  max: 10000, // 최대 100개의 요청을 허용
+});
+app.use('/', limiter);
+
+makeTestAPI(app);
 
 app.get('/lab/popular/:page', getListOrderedByLike);
 app.get('/lab/newest/:page', getListOrderedByNewest);
