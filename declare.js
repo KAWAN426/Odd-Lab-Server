@@ -1,12 +1,20 @@
 import NodeCache from 'node-cache';
 import pg from 'pg';
 import dotenv from "dotenv"
+import S3 from "aws-sdk/clients/s3.js"
 import { createCachero } from './cachero.js';
 import { createClient } from 'redis';
 
 const { Pool } = pg
 
+
 dotenv.config();
+
+export const s3 = new S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: 'ap-northeast-2',
+});
 
 export const pool = new Pool({
   user: process.env.PG_NAME,
@@ -39,3 +47,4 @@ export const redis = createClient({
 });
 
 export const labCachero = createCachero()
+

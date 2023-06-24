@@ -5,9 +5,10 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getDataByKeyword, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
-import { labCachero, pool, redis } from './declare.js';
+import { labCachero, pool, redis, s3 } from './declare.js';
 import { makeTestAPI } from './routes/test.js';
 import { getUserById, upsertUser } from './routes/users.js';
+import { getImagePresignURL } from './routes/image.js';
 
 const app = express();
 app.use(express.json());
@@ -39,6 +40,8 @@ app.post('/lab', createLab);
 app.put('/lab/:id', updateLab);
 app.put('/lab/like/:id/:userId', updateLabLike);
 app.delete('/lab/:id', deleteLabById);
+
+app.get('/image', getImagePresignURL)
 
 app.get('/user/:id', getUserById);
 app.put('/user/:id', upsertUser);
@@ -82,4 +85,11 @@ app.listen(3000, async () => {
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }
+});
+
+process.on('SIGINT', () => {
+  console.log("Server shut down")
+  redis.quit();
+  pool.end();
+  process.exit();
 });
