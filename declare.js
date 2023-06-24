@@ -4,11 +4,18 @@ import dotenv from "dotenv"
 import S3 from "aws-sdk/clients/s3.js"
 import { createCachero } from './cachero.js';
 import { createClient } from 'redis';
+import { fileURLToPath } from "url";
+import path from 'path';
 
 const { Pool } = pg
 
 
 dotenv.config();
+
+// @ts-ignore
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+export const ImagePath = path.join(__dirname, 'image');
 
 export const s3 = new S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,

@@ -5,10 +5,10 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getDataByKeyword, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
-import { labCachero, pool, redis, s3 } from './declare.js';
+import { labCachero, pool, redis } from './declare.js';
 import { makeTestAPI } from './routes/test.js';
 import { getUserById, upsertUser } from './routes/users.js';
-import { getImagePresignURL } from './routes/image.js';
+import { getImage, getImagePresignURL } from './routes/image.js';
 
 const app = express();
 app.use(express.json());
@@ -41,7 +41,8 @@ app.put('/lab/:id', updateLab);
 app.put('/lab/like/:id/:userId', updateLabLike);
 app.delete('/lab/:id', deleteLabById);
 
-app.get('/image', getImagePresignURL)
+app.get('/image/presignurl', getImagePresignURL)
+app.get('/image/:fileName', getImage)
 
 app.get('/user/:id', getUserById);
 app.put('/user/:id', upsertUser);
@@ -69,12 +70,12 @@ app.listen(3000, async () => {
     const times = [[3, 0]];
     const scheduler = labCachero.scheduler(times)
 
-    redis.on('error', err => {
-      console.log('Redis Client Error', err)
-      scheduler.cancel()
-    });
-    await redis.connect();
-    console.log("Redis connected")
+    // redis.on('error', err => {
+    //   console.log('Redis Client Error', err)
+    //   scheduler.cancel()
+    // });
+    // await redis.connect();
+    // console.log("Redis connected")
 
     const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
     labCachero.setCount(labCountResult.rows[0].count)
