@@ -8,7 +8,7 @@ import { createLab, deleteLabById, getDataByKeyword, getListByMakerId, getListOr
 import { labCachero, pool, redis } from './declare.js';
 import { makeTestAPI } from './routes/test.js';
 import { getUserById, upsertUser } from './routes/users.js';
-import { getImage, getImagePresignURL } from './routes/image.js';
+import { getImageFile, getImagePresignURL } from './routes/image.js';
 
 const app = express();
 app.use(express.json());
@@ -25,7 +25,7 @@ app.use((_, res, next) => {
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15분 동안
-  max: 10000, // 최대 100개의 요청을 허용
+  max: 1000,
 });
 app.use('/', limiter);
 
@@ -42,7 +42,7 @@ app.put('/lab/like/:id/:userId', updateLabLike);
 app.delete('/lab/:id', deleteLabById);
 
 app.get('/image/presignurl', getImagePresignURL)
-app.get('/image/:fileName', getImage)
+app.get('/image/:fileName', getImageFile)
 
 app.get('/user/:id', getUserById);
 app.put('/user/:id', upsertUser);

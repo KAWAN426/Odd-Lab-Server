@@ -27,10 +27,22 @@ export const getImagePresignURL = async (req, res) => {
   }
 }
 
-export const getImage = async (req, res) => {
+const imageData = []
+
+export const refreshImage = () => {
+  imageData.map(({ id, expire }) => {
+    if (!(expire <= new Date())) return;
+    const imagePath = path.join(ImagePath, id);
+    fs.unlink(imagePath, (err) => err ? console.log(`파일 삭제 오류 (${id}):`, err) : null);
+  })
+}
+export const getImageFile = async (req, res) => {
   const { fileName } = req.params;
   const imagePath = path.join(ImagePath, fileName);
-  if (fs.existsSync(imagePath)) {
+  const targetIndex = imageData.findIndex(item => item.id === fileName);
+  if (fs.existsSync(imagePath) && targetIndex) {
+    const newExpire = new Date(imageData[targetIndex].expire.getTime() + 15 * 60 * 1000);
+    imageData[targetIndex] = { ...imageData[targetIndex], expire: newExpire }
     return res.sendFile(imagePath)
   }
   const params = {
@@ -38,12 +50,12 @@ export const getImage = async (req, res) => {
     Key: fileName,
   }
   s3.getObject(params, (err, data) => {
-    if (err) {
-      return res.status(404).json("Image not found");
-    }
+    if (err) return res.status(404).json("Image not found");
     const imageBuffer = data.Body;
     res.contentType(data.ContentType);
     res.send(imageBuffer);
+
+    imageData.push({ id: fileName, expire: new Date() })
     // @ts-ignore
     fs.writeFileSync(imagePath, imageBuffer);
   })

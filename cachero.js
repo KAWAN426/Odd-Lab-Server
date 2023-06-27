@@ -1,4 +1,5 @@
-import { labCachero, pool, redis } from "./declare.js"
+import { pool, redis } from "./declare.js"
+import { refreshImage } from "./routes/image.js"
 
 export const createCachero = (cacheName) => {
   const info = { count: 0, name: cacheName, cachedKey: [], data: [] }
@@ -12,7 +13,7 @@ export const createCachero = (cacheName) => {
   const cCreate = (newData) => { createData(info, newData); info.count++; }
   const cRemove = (id) => { removeDataById(info, id); info.count--; }
   const batchSave = () => saveCacheBatch(info)
-  const scheduler = (times) => cacheScheduler(times, [batchSave, preloadDataOnCache])
+  const scheduler = (times) => cacheScheduler(times, [batchSave, preloadDataOnCache, refreshImage])
   return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, batchSave, scheduler, isCached }
 }
 
