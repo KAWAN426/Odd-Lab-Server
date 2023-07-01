@@ -2,7 +2,8 @@ import { pool, redis } from "./declare.js"
 import { refreshImage } from "./routes/image.js"
 
 export const createCachero = (cacheName) => {
-  const info = { count: 0, name: cacheName, cachedKey: [], data: [] }
+  const info = { count: 0, name: cacheName, cachedKey: [], data: [], deleted: [] }
+  const getDeleted = () => info.deleted
   const setCount = (count) => info.count = count
   const getCount = () => info.count
   const getData = () => info.data
@@ -13,8 +14,9 @@ export const createCachero = (cacheName) => {
   const cCreate = (newData) => { createData(info, newData); info.count++; }
   const cRemove = (id) => { removeDataById(info, id); info.count--; }
   const batchSave = () => saveCacheBatch(info)
+  const preload = () => preloadDataOnCache()
   const scheduler = (times) => cacheScheduler(times, [batchSave, preloadDataOnCache, refreshImage])
-  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, batchSave, scheduler, isCached }
+  return { setCount, getCount, getData, cSort, cFilter, cMerge, cCreate, cRemove, batchSave, scheduler, isCached, preload, getDeleted }
 }
 
 function cacheScheduler(times, fnArr) {
@@ -43,7 +45,7 @@ function cacheScheduler(times, fnArr) {
   return { cancel };
 }
 
-async function saveCacheBatch({ data }) {
+async function saveCacheBatch({ data, cachedKey }) {
   const upsertQuery = `
     INSERT INTO lab (id, title, maker_id, objects, background_img, combinate, start_obj, end_obj, liked_user, find_obj, created_at, updated_at)
     VALUES
@@ -83,11 +85,12 @@ async function saveCacheBatch({ data }) {
   await pool.query(upsertQuery, values);
 
   data.splice(0, data.length)
+  cachedKey.splice(0, cachedKey.length)
 }
 
 async function preloadDataOnCache() {
   const newestResult = await pool.query(`
-    SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
+    SELECT lab.*,
     COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
     users.name AS maker_name, users.profile_img AS maker_img
     FROM lab 
@@ -96,7 +99,7 @@ async function preloadDataOnCache() {
     LIMIT $1;
   `, [30 * 2]);
   const popularResult = await pool.query(`
-    SELECT lab.id, title, background_img, start_obj, end_obj, created_at, liked_user,
+    SELECT lab.*,
     COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
     users.name AS maker_name, users.profile_img AS maker_img
     FROM lab 
@@ -207,15 +210,16 @@ function sortData({ data }, keys, sortOrder = 'ASC') {
   return { get, select, unselect, paginate, sort, filter };
 }
 
-async function removeDataById(info, id) {
+async function removeDataById({ data, deleted }, id) {
   // 배열에서 특정 id를 가진 오브젝트를 제거하는 함수
-  const index = info.data.findIndex(obj => obj.id === id); // 특정 id를 가진 오브젝트의 인덱스를 찾음
+  const index = data.findIndex(obj => obj.id === id); // 특정 id를 가진 오브젝트의 인덱스를 찾음
 
   if (index !== -1) {
-    info.data.splice(index, 1); // 해당 인덱스의 오브젝트를 배열에서 제거
+    deleted.push(id)
+    data.splice(index, 1); // 해당 인덱스의 오브젝트를 배열에서 제거
   }
 
-  redis.set("lab", JSON.stringify(info.data))
+  redis.set("lab", JSON.stringify(data))
 }
 
 async function createData(info, newData) {

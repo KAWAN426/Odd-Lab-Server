@@ -70,12 +70,12 @@ app.listen(3000, async () => {
     const times = [[3, 0]];
     const scheduler = labCachero.scheduler(times)
 
-    // redis.on('error', err => {
-    //   console.log('Redis Client Error', err)
-    //   scheduler.cancel()
-    // });
-    // await redis.connect();
-    // console.log("Redis connected")
+    redis.on('error', err => {
+      console.log('Redis Client Error', err)
+      scheduler.cancel()
+    });
+    await redis.connect();
+    console.log("Redis connected")
 
     const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
     labCachero.setCount(labCountResult.rows[0].count)
