@@ -22,6 +22,7 @@ export const getDataByKeyword = async (req, res) => {
       COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab
+      JOIN users ON lab.maker_id = users.id
       WHERE ${searchQuery};
       ORDER BY COALESCE(ARRAY_LENGTH(liked_user, 1), 0) DESC, created_at DESC
       LIMIT $1 OFFSET $2;
@@ -69,7 +70,7 @@ export const getListOrderedByLike = async (req, res) => {
       COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab 
-      INNER JOIN users ON lab.maker_id = users.id
+      JOIN users ON lab.maker_id = users.id
       ORDER BY COALESCE(ARRAY_LENGTH(liked_user, 1), 0) DESC, created_at DESC
       LIMIT $1 OFFSET $2;
     `, [pageSize * 2, offset]);
@@ -131,7 +132,7 @@ export const getListOrderedByNewest = async (req, res) => {
       COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab 
-      INNER JOIN users ON lab.maker_id = users.id
+      JOIN users ON lab.maker_id = users.id
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2;
     `, [pageSize * 2, offset]);
@@ -184,7 +185,7 @@ export const getOneById = async (req, res) => {
       COALESCE(ARRAY_LENGTH(liked_user, 1), 0) AS like_count,
       users.name AS maker_name, users.profile_img AS maker_img
       FROM lab
-      INNER JOIN users ON lab.maker_id = users.id
+      JOIN users ON lab.maker_id = users.id
       WHERE lab.id = $1;
     `, [id]);
     const resultData = result.rows[0]
