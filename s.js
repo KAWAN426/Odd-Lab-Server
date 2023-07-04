@@ -8,7 +8,7 @@ const newCachero = (pool) => {
   return {
     getTable: async ({ table, preload }) => {
       const countResult = await pool.query(`SELECT COUNT(*) FROM ${table};`)
-      const info = { cache, table, cachedKey: [], count: countResult.rows[0].count },
+      const info = { cache, table, cachedKey: [], count: countResult.rows[0].count }
       return {
         select: (selectData, props, key) => select(info, pool, selectData, props, key),
 
@@ -112,9 +112,6 @@ const select = async ({ table, cache, count, cachedKey }, pool, selectData, prop
   return resultData
 }
 
-const cachero = createCachero(pool)
-
-const labTable = await cachero.getTable({ table: "lab", preload: false })
 
 //TODO Search
 const search = {
@@ -122,18 +119,18 @@ const search = {
   keyword: ["%keyword%"]
 }
 
-labTable.select({
-  column: "",
-  order: ["created_at DESC"],
-  join: "users ON lab.maker_id = users.id",
-  limit: 30,
-  offset: 0,
-  where: {
-    condition2: ["column1", ">", "$1"],
-    condition3: ["column1", "IN", ["1", "2"]],
-    result: ["condition1", "&&", "condition2", "||", "condition3"]
-  },
-}, [id])
+// labTable.select({
+//   column: "",
+//   order: ["created_at DESC"],
+//   join: "users ON lab.maker_id = users.id",
+//   limit: 30,
+//   offset: 0,
+//   where: {
+//     condition2: ["column1", ">", "$1"],
+//     condition3: ["column1", "IN", ["1", "2"]],
+//     result: ["condition1", "&&", "condition2", "||", "condition3"]
+//   },
+// }, [id])
 
 function evaluateCondition(condition, item) {
   const [key, operator, value] = condition;
@@ -178,12 +175,3 @@ function filterData(data, conditions) {
     return eval(resultCon)
   })
 }
-
-
-// const filteredData = filterData(data, { //* Where에서 JOIN한 컬럼을 사용하면 JOIN을 할떄 조인한 id값도 select에 넣어야함
-//   condition1: ['column2', '=', 'B'],
-//   condition2: ['column1', 'IN', [1, 2]],
-//   result: ['condition1', "||", 'condition2'],
-// });
-
-// console.log(filteredData);
