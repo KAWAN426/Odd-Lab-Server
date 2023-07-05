@@ -2,7 +2,7 @@ import NodeCache from 'node-cache';
 import pg from 'pg';
 import dotenv from "dotenv"
 import S3 from "aws-sdk/clients/s3.js"
-import { createCachero } from './cachero.js';
+import { createCachero } from './cachero/index.js';
 import { createClient } from 'redis';
 import { fileURLToPath } from "url";
 import path from 'path';
@@ -53,5 +53,6 @@ export const redis = createClient({
   // legacyMode: true
 });
 
-export const labCachero = createCachero()
+const cachero = createCachero()
 
+export const labCachero = cachero.getTable("lab")
