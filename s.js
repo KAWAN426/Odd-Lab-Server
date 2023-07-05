@@ -37,17 +37,17 @@ const select = async ({ table, cache, count, cachedKey }, pool, selectData, prop
       else if (operator !== "IN" || operator !== "NOT IN") return selectData.where[condition].join(" ")
       else if (Array.isArray(value)) return key + operator + `(${value.join(',')})`
     }).join(" ")
-    const join = selectData.join ?? ""
-    const column = selectData.column ?? ""
-    const order = selectData.order ? selectData.order.join(", ") : ""
-    const limit = selectData.limit ? "LIMIT" + selectData.limit : ""
-    const offset = selectData.offset ? "OFFSET" + selectData.offset : ""
+    const join = selectData.join ? "JOIN " + selectData.join : ""
+    const column = selectData.column ?? `${table}.*`
+    const order = selectData.order ? "ORDER BY " + selectData.order.join(", ") : ""
+    const limit = selectData.limit ? "LIMIT " + selectData.limit : ""
+    const offset = selectData.offset ? "OFFSET " + selectData.offset : ""
     const result = await pool.query(`
       SELECT ${column}
       FROM ${table}
-      JOIN ${join}
-      WHERE ${where}
-      ORDER BY ${order}
+      ${join}
+      ${where}
+      ${order}
       ${limit} ${offset};
     `, props);
     return result.rows
@@ -130,10 +130,22 @@ const search = {
 //     condition3: ["column1", "IN", ["1", "2"]],
 //     result: ["condition1", "&&", "condition2", "||", "condition3"]
 //   },
-// }, [id])
+// })
+
 
 function evaluateCondition(condition, item) {
   const [key, operator, value] = condition;
+  function checkLikeData() {
+    const checkEndData = item[key][0] === "%";
+    const checkStartData = item[key][item[key].length - 1] === "%";
+    const onlyValue = value.replace(/\%/g, '');
+    const isEndsWith = item[key].endsWith(onlyValue)
+    const isStartsWith = item[key].startsWith(onlyValue)
+
+    if (checkEndData && !checkStartData) return isEndsWith
+    else if (!checkEndData && checkStartData) return isStartsWith
+    else return isEndsWith && isStartsWith
+  }
   switch (operator) {
     case '=':
       return item[key] == value;
@@ -155,6 +167,10 @@ function evaluateCondition(condition, item) {
       return value.includes(item[key]);
     case 'NOT IN':
       return !value.includes(item[key]);
+    case 'ILIKE':
+      return checkLikeData()
+    case 'LIKE':
+      return checkLikeData()
     default:
       return true;
   }
