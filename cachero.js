@@ -224,7 +224,6 @@ async function removeDataById({ data, deleted }, id) {
 
 async function createData(info, newData) {
   const result = info.data.push(newData)
-  info.count = info.count + 1
   redis.set("lab", JSON.stringify(result))
   return result
 }
@@ -244,17 +243,6 @@ async function mergeData(info, newArray, key) {
   });
 
   redis.set("lab", JSON.stringify(data))
-
-  // * SET 형식 저장 코드
-  // await data.forEach((obj) => {
-  //   const value = JSON.stringify(obj);
-  //   redis.sAdd("lab", value);
-  // });
-  // const result = await redis.sMembers("lab")
-
-  // * SET 형식 가져오는 코드
-  // const members = await redis.set("lab", JSON.stringify(data))
-  // console.log(members)
 
   return data;
 }

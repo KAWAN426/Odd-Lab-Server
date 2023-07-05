@@ -1,22 +1,3 @@
-const createCachero = (pool) => {
-  return newCachero(pool)
-}
-
-const cache = {}
-
-const newCachero = (pool) => {
-  return {
-    getTable: async ({ table, preload }) => {
-      const countResult = await pool.query(`SELECT COUNT(*) FROM ${table};`)
-      const info = { cache, table, cachedKey: [], count: countResult.rows[0].count }
-      return {
-        select: (selectData, props, key) => select(info, pool, selectData, props, key),
-
-      }
-    }
-  }
-}
-
 
 function isDateString(inputString) {
   const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -29,8 +10,8 @@ function isDateString(inputString) {
   return false
 }
 
-const select = async ({ table, cache, count, cachedKey }, pool, selectData, props, key) => {
-  if (!cachedKey.includes(key) || cache[table].length !== count) {
+export const select = async ({ redis, table, data, count, cachedKey, deleted }, pool, selectData, props, key) => {
+  if (!cachedKey.includes(key) || data.length !== count) {
     const where = selectData.where.result.map((condition) => {
       const [key, operator, value] = selectData.where[condition]
       if (result === "&&" || result === "||") return result
@@ -50,10 +31,28 @@ const select = async ({ table, cache, count, cachedKey }, pool, selectData, prop
       ${order}
       ${limit} ${offset};
     `, props);
+
+    deleted.forEach(({ key, value }) => {
+      result.rows.forEach((resultData, index) => {
+        if (resultData[key] === value) delete result.rows[index]
+      })
+    })
+
+    cachedKey.push(key)
+    const selectResult = JSON.parse(JSON.stringify(result.rows))
+    selectResult.forEach(newObj => {
+      const existingObjIndex = data.findIndex(obj => obj.id === newObj.id);
+      if (existingObjIndex !== -1) {
+        data[existingObjIndex] = { ...data[existingObjIndex], ...newObj }; // 이미 있는 오브젝트를 덮어씌우면서 새로운 키를 추가
+      } else {
+        data.push(newObj); // 새로운 오브젝트를 추가
+      }
+    });
+    if (redis) redis.set(table, JSON.stringify(data))
     return result.rows
   }
 
-  let resultData = cache[table];
+  let resultData = data;
 
   let column
   if ("column" in selectData) {
@@ -110,13 +109,6 @@ const select = async ({ table, cache, count, cachedKey }, pool, selectData, prop
   if ("limit" in selectData) resultData = resultData.slice(0, selectData.limit)
 
   return resultData
-}
-
-
-//TODO Search
-const search = {
-  name: "title",
-  keyword: ["%keyword%"]
 }
 
 // labTable.select({
