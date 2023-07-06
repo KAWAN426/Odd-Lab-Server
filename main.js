@@ -82,7 +82,7 @@ app.listen(3000, async () => {
     checkLabTable(pool);
     checkTestTable(pool);
 
-    await labCachero.setting({ table: "lab", preloadData: [], pool, redis })
+    await labCachero.setting({ table: "lab", preloadData: [], pool, redis: null })
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }

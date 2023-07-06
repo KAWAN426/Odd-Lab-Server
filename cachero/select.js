@@ -4,6 +4,7 @@ export const select = async (info, queryForm, key) => {
   checkQueryFormVaild(info, queryForm)
 
   const cache_validation = cachedKey.includes(key) || data.length === count
+  
   if (!cache_validation) {
     const result = await selectQueryResult(info, queryForm, key)
     return result

@@ -55,7 +55,6 @@ export const getListOrderedByLike = async (req, res) => {
     limit: pageSize,
     offset
   }, cachedKey)
-  // console.log(result)
   res.json(result);
 
 
