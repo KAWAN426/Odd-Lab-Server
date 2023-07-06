@@ -3,29 +3,27 @@ import { deleteData } from "./delete.js"
 import { select } from "./select.js"
 import { update } from "./update.js"
 
-export const createCachero = (pool, redis) => {
-  return newCachero(pool, redis)
-}
-
-const newCachero = (pool, redis) => {
-  const info = { redis, data: [], table: "", cachedKey: [], count: 0, deleted: [] }
+export const createCachero = () => {
+  const info = { pool: null, redis: null, data: [], table: "", cachedKey: [], count: 0, deleted: [], tableColumns: [] }
   return {
-    getTable: (table) => {
+    select: (selectData, key) => select(info, selectData, key),
+    create: (newData) => { create(info, newData); info.count++; },
+    update: (newData) => { update(info, newData); info.count--; },
+    delete: (id) => deleteData(info, id),
+    setting: async ({ table, preloadData, pool, redis }) => {
       info.table = table;
-      return {
-        select: (selectData, props, key) => select(info, pool, selectData, props, key),
-        create: (newData) => { create(info, newData); info.count++; },
-        update: (newData) => { update(info, newData); info.count--; },
-        delete: (id) => deleteData(info, id),
-
-      }
-    },
-    setting: async ({ preloadData, pool, redis }) => {
       info.pool = pool;
+      const columnNameResult = await pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = '${info.table}';
+      `)
+      info.tableColumns = columnNameResult.rows.map((row) => row.column_name);
       if (preloadData) info.data = [...preloadData];
       if (redis) info.redis = redis;
       const countResult = await pool.query(`SELECT COUNT(*) FROM ${info.table};`);
       info.count = countResult;
+      console.log(`Cachero(${table}) setting completed`)
     }
   }
 }

@@ -53,6 +53,4 @@ export const redis = createClient({
   // legacyMode: true
 });
 
-const cachero = createCachero()
-
-export const labCachero = cachero.getTable("lab")
+export const labCachero = createCachero()

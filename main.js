@@ -68,21 +68,21 @@ app.listen(3000, async () => {
     console.log("Postgresql connected")
 
     const times = [[3, 0]];
-    const scheduler = labCachero.scheduler(times)
+    // const scheduler = labCachero.scheduler(times)
 
     redis.on('error', err => {
       console.log('Redis Client Error', err)
-      scheduler.cancel()
+      // scheduler.cancel()
     });
     await redis.connect();
     console.log("Redis connected")
 
-    const labCountResult = await pool.query("SELECT COUNT(*) FROM lab;")
-    labCachero.setCount(labCountResult.rows[0].count)
+
     checkUserTable(pool);
     checkLabTable(pool);
     checkTestTable(pool);
 
+    await labCachero.setting({ table: "lab", preloadData: [], pool, redis })
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }

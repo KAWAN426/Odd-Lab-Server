@@ -10,27 +10,33 @@ function isDateString(inputString) {
   return false
 }
 
-export const select = async ({ redis, table, data, count, cachedKey, deleted }, pool, selectData, props, key) => {
-  if (!cachedKey.includes(key) || data.length !== count) {
-    const where = selectData.where.result.map((condition) => {
+export const select = async ({ redis, table, data, count, cachedKey, deleted, pool, tableColumns }, selectData, key) => {
+  selectData.column.forEach((column) => {
+    if (column.includes(".*") && !column.includes(table)) {
+      throw Error(`You can't send column like this: anotherTable.*`);
+    }
+  })
+
+  if (!(cachedKey.includes(key) || data.length === count)) {
+    const where = selectData.where ? selectData.where.result.map((condition) => {
       const [key, operator, value] = selectData.where[condition]
       if (result === "&&" || result === "||") return result
       else if (operator !== "IN" || operator !== "NOT IN") return selectData.where[condition].join(" ")
       else if (Array.isArray(value)) return key + operator + `(${value.join(',')})`
-    }).join(" ")
+    }).join(" ") : ""
     const join = selectData.join ? "JOIN " + selectData.join : ""
-    const column = selectData.column ?? `${table}.*`
+    const columnList = selectData.column.join(", ") ?? `${table}.*`
     const order = selectData.order ? "ORDER BY " + selectData.order.join(", ") : ""
     const limit = selectData.limit ? "LIMIT " + selectData.limit : ""
     const offset = selectData.offset ? "OFFSET " + selectData.offset : ""
     const result = await pool.query(`
-      SELECT ${column}
+      SELECT ${columnList}
       FROM ${table}
       ${join}
       ${where}
       ${order}
       ${limit} ${offset};
-    `, props);
+    `);
 
     deleted.forEach(({ key, value }) => {
       result.rows.forEach((resultData, index) => {
@@ -54,53 +60,87 @@ export const select = async ({ redis, table, data, count, cachedKey, deleted }, 
 
   let resultData = data;
 
-  let column
+  const columnList = []
   if ("column" in selectData) {
-    const columns = selectData.column.split(/,\s*/);
-    column = columns.map((column) => {
-      const dotPattern = /\.(\w+)/;
-      const asPattern = /AS\s(.+)/;
-      const dotResult = column.match(dotPattern);
-      const asResult = column.match(asPattern);
-      if (dotResult && dotResult.length > 1) return dotResult
-      else if (asResult && asResult.length > 1) return asResult
-    })
 
-    resultData = resultData.map(function (obj) {
-      const filteredObj = {};
-      columns.forEach(function (key) {
-        if (obj.hasOwnProperty(key)) {
-          filteredObj[key] = obj[key];
+    if (selectData.column.indexOf("*") < 0) {
+      selectData.column.forEach((column) => {
+        const dotResult = column.match(/\.(\w+)/);
+        const isIncludeNotTableName = column.includes(".*") && !column.includes(table);
+        const isIncludeAS = column.includes(" AS ") ? " AS " : null || column.includes(" as ") ? " as " : null
+        let resultColumn = column;
+        if (isIncludeAS) {
+          resultColumn = column.split(isIncludeAS)[1]
+        } else if (column === `${table}.*`) {
+          return columnList.push(...tableColumns)
+        } else if (isIncludeNotTableName) {
+          throw Error(`You can't send column like this: anotherTable.*`);
+        } else if (dotResult && dotResult.length > 1) {
+          resultColumn = dotResult[1]
         }
+        if (columnList.includes(resultColumn)) throw Error("Wrong Column Selected");
+        return columnList.push(resultColumn)
+      })
+
+      resultData = resultData.map((obj) => {
+        const filteredObj = {};
+        columnList.forEach((key) => {
+          if (obj.hasOwnProperty(key)) {
+            filteredObj[key] = obj[key];
+          }
+        });
+        return filteredObj;
       });
-      return filteredObj;
-    });
+    }
   }
 
-  if ("order" in selectData) {
-    resultData = selectData.sort((a, b) => {
-      const x = a[key].toLowerCase();;
-      const y = b[key].toLowerCase();;
+  function orderData(order, key) {
+    resultData = resultData.sort((a, b) => {
+      const x = a[key];
+      const y = b[key];
 
-      if (typeof x === 'number' && typeof y === 'number') return x - y;
-      else if (isDateString(x) && isDateString(y)) {
+      if (typeof x === 'number' && typeof y === 'number') {
+        if (order === "DESC") return y - x;
+        else return x - y;
+      } else if (isDateString(x) && isDateString(y)) {
         // @ts-ignore
-        return new Date(x) - new Date(y);
+        if (order === "DESC") return new Date(y) - new Date(x);
+        // @ts-ignore
+        else return new Date(x) - new Date(y);
       }
-      else if (typeof x === 'string' && typeof y === 'string') {
-        if (x < y) return -1;
-        else if (x > y) return 1;
+      else {
+        if (order === "DESC") {
+          if (x > y) return -1;
+          else if (x < y) return 1;
+          else return 0;
+        } else {
+          if (x < y) return -1;
+          else if (x > y) return 1;
+          else return 0;
+        }
       }
-      return 0;
     });
+  }
+  if ("order" in selectData) {
+    selectData.order.forEach((key) => {
+      const order = key.split(" ")
+      if (order.length === 2) {
+        if (order[1] === "DESC") orderData("DESC", order[0])
+        else orderData("ASC", order[0])
+      } else if (order.length === 1) {
+        orderData("ASC", order[0])
+      } else {
+        throw Error("Invalid structure of order")
+      }
+    })
   }
 
   if ("where" in selectData) {
-    Object.keys(selectData.where).forEach((key) => {
-      if (!column.includes(selectData.where[key][0]) && key !== "result") {
-        throw "You must bring the column, which is the condition of the where clause, as an element";
-      }
-    })
+    // Object.keys(selectData.where).forEach((key) => {
+    //   if (!columnList.includes(selectData.where[key][0]) && key !== "result") {
+    //     throw Error("You must bring the column, which is the condition of the where clause, as an element");
+    //   }
+    // })
     resultData = filterData(resultData, selectData.where)
   }
 
@@ -178,7 +218,7 @@ function filterData(data, conditions) {
     const resultCon = conditions.result.map((result) => {
       if (result === "&&" || result === "||") return result
       else if (result in totalCondition) return String(totalCondition[result])
-      throw "Result contains undefined conditions"
+      throw Error("Result contains undefined conditions")
     }).join(" ")
     return eval(resultCon)
   })
