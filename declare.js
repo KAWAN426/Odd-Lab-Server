@@ -2,17 +2,15 @@ import NodeCache from 'node-cache';
 import pg from 'pg';
 import dotenv from "dotenv"
 import S3 from "aws-sdk/clients/s3.js"
-import { createCachero } from './cachero/index.js';
+import { createCachero } from 'cachero';
 import { createClient } from 'redis';
 import { fileURLToPath } from "url";
 import path from 'path';
 
 const { Pool } = pg
 
-
 dotenv.config();
 
-// @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export const ImagePath = path.join(__dirname, 'image');
@@ -50,7 +48,6 @@ export const setCache = (req, data) => {
 
 export const redis = createClient({
   url: `redis://${process.env.REDIS_USERNAME}:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}/0`,
-  // legacyMode: true
 });
 
 export const labCachero = createCachero()
