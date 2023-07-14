@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "module": "esnext",
+    // "module": "esnext",
     "checkJs": true,
-    "target": "es6",
-    "moduleResolution": "nodenext"
+    // "target": "es6",
+    // "moduleResolution": "nodenext"
   },
   "exclude": [
     "node_modules"

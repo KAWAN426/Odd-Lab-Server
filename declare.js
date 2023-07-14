@@ -11,6 +11,7 @@ const { Pool } = pg
 
 dotenv.config();
 
+// @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export const ImagePath = path.join(__dirname, 'image');
@@ -51,3 +52,4 @@ export const redis = createClient({
 });
 
 export const labCachero = createCachero()
+export const userCachero = createCachero()

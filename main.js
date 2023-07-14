@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { checkLabTable, checkTestTable, checkUserTable } from './tableCheck.js';
 import { createLab, deleteLabById, getDataByKeyword, getListByMakerId, getListOrderedByLike, getListOrderedByNewest, getOneById, updateLab, updateLabLike } from './routes/lab.js';
-import { labCachero, pool, redis } from './declare.js';
+import { labCachero, pool, redis, userCachero } from './declare.js';
 import { makeTestAPI } from './routes/test.js';
 import { getUserById, upsertUser } from './routes/users.js';
 import { getImageFile, getImagePresignURL } from './routes/image.js';
@@ -68,21 +68,21 @@ app.listen(3000, async () => {
     console.log("Postgresql connected")
 
     const times = [[3, 0]];
-    // const scheduler = labCachero.scheduler(times)
+    const scheduler = labCachero.scheduler(times, [])
 
-    redis.on('error', err => {
-      console.log('Redis Client Error', err)
-      // scheduler.cancel()
-    });
-    await redis.connect();
-    console.log("Redis connected")
-
+    // redis.on('error', err => {
+    //   console.log('Redis Client Error', err)
+    //   scheduler.cancel()
+    // });
+    // await redis.connect();
+    // console.log("Redis connected")
 
     checkUserTable(pool);
     checkLabTable(pool);
     checkTestTable(pool);
 
-    await labCachero.setting({ table: "lab", preloadData: [], pool, redis: null })
+    await labCachero.setting({ table: 'lab', queryRunner: pool, refKey: 'id' })
+    await userCachero.setting({ table: 'users', queryRunner: pool, refKey: 'id' })
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }
