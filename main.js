@@ -70,19 +70,19 @@ app.listen(3000, async () => {
     const times = [[3, 0]];
     const scheduler = labCachero.scheduler(times, [])
 
-    // redis.on('error', err => {
-    //   console.log('Redis Client Error', err)
-    //   scheduler.cancel()
-    // });
-    // await redis.connect();
-    // console.log("Redis connected")
+    redis.on('error', err => {
+      console.log('Redis Client Error', err)
+      scheduler.cancel()
+    });
+    await redis.connect();
+    console.log("Redis connected")
 
     checkUserTable(pool);
     checkLabTable(pool);
     checkTestTable(pool);
 
-    await labCachero.setting({ table: 'lab', queryRunner: pool, refKey: 'id' })
-    await userCachero.setting({ table: 'users', queryRunner: pool, refKey: 'id' })
+    await labCachero.setting({ table: 'lab', redis, queryRunner: pool, refKey: 'id' })
+    await userCachero.setting({ table: 'users', redis, queryRunner: pool, refKey: 'id' })
   } catch (error) {
     console.log('Database connect failed : ' + error);
   }
